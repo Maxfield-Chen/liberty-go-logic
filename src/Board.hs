@@ -15,19 +15,19 @@ instance Applicative Pair where
   pure x = Pair x x
   (Pair f g) <*> (Pair x y) = Pair (f x) (g y)
 
-type Position = Pair Integer
+type Position = Pair Int
 
-data Outcome = Alive | Dead | IllegalKo | Suicide | OutOfBounds deriving (Show, Eq)
+data Outcome = Nop | Kill | IllegalKo | Suicide | OutOfBounds deriving (Show, Eq)
 -- TODO: Refactor Space to deal with empty case. Maybe instead?
 data Space = Black | White | Empty deriving (Show, Eq, Ord)
 
 type Board = M.Map Position Space
 
 -- TODO: Refactor record to include captures at each board state
-data Game = Game { boardSize :: Integer
+data Game = Game { boardSize :: Int
                  , record :: [Board]
-                 , whiteCaptures :: Integer
-                 , blackCaptures :: Integer
+                 , whiteCaptures :: Int
+                 , blackCaptures :: Int
                  , activePlayer :: Space} deriving (Show)
 
 data Group = Group { liberties :: S.Set Position
@@ -44,7 +44,7 @@ getPosition :: Position -> State Game Space
 getPosition pos =
   state (\game -> (M.findWithDefault Empty pos (currentBoard game), game))
 
--- TODO Add move validation
+-- TODO: Check if occupied and check if within bounds
 setPosition :: Position -> State Game ()
 setPosition pos = state
   (\game ->
@@ -56,6 +56,10 @@ neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
 getNeighbors :: Position -> [Position]
 getNeighbors pos = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
+
+isOccupied :: Position -> State Game Bool
+isOccupied pos =
+  getPosition pos >>= (\sp -> if sp == Empty then pure False else pure True)
 
 adjMatchingPos :: Space -> Position -> State Game (S.Set Position)
 adjMatchingPos sp pos = do
@@ -92,10 +96,55 @@ posToGroup pos = do
   let newGroup = Group liberties (S.singleton pos) color
   enumGroup newGroup
 
--- Place a stone, updating the game record and groups if the move is valid.
+-- Place a stone, updating the game record if the move is valid.
+-- Returns an Outcome indicating if the move was valid, and if a group was captured
 -- Use mapM to check all groups at once
-placeStone :: Position -> State Game ()
+placeStone :: Position -> State Game Outcome
 placeStone pos = do
-  curSpace <- getPosition pos
-  let neighbors = getNeighbors pos
   setPosition pos
+  neighbors <- filterM isOccupied (getNeighbors pos)
+  adjGroups <- mapM posToGroup neighbors
+  resolvePlacement adjGroups
+
+-- Given surrounding groups, resolve stone placement + captures
+-- IF same color surrounding group drops to 0 lib with a 0 lib other color, Kill
+-- IF same color surrounding group drops to 0 lib without a 0 lib other color, then Suicide
+-- IF other color surrounding group drops to 0 lib, Kill
+-- IF resulting board is the same as the penultimate board, then IllegalKo
+-- ELSE Nop 
+-- If valid, update game record w/ killed groups, otherwise remove invalid state
+resolvePlacement :: [Group] -> State Game Outcome
+resolvePlacement groups | null zeroLibGroups = pure Nop
+                        | otherwise          = resolveKill zeroLibGroups
+  where zeroLibGroups = filter ((==) 0 . S.size . liberties) groups
+
+
+resolveKill :: [Group] -> State Game Outcome
+resolveKill zeroLibGroups = do
+  game <- get
+  let color  = activePlayer game
+      toKill = if color == Black then blackZLGroups else whiteZLGroups
+  mapM_ captureGroup toKill
+  pure Kill
+ where
+  blackZLGroups = filter ((==) Black . color) zeroLibGroups
+  whiteZLGroups = filter ((==) White . color) zeroLibGroups
+
+-- Given a group, remove all members of that group and credit the player with captures
+captureGroup :: Group -> State Game ()
+captureGroup deadGroup = state
+  (\game ->
+    let b : bs   = record game
+        newBoard = M.filterWithKey (isMember deadGroup) b
+        isMember tk pos _ = S.member pos (members tk)
+        newGame = if activePlayer game == Black
+          then game
+            { record        = newBoard : bs
+            , blackCaptures = blackCaptures game + (S.size . members) deadGroup
+            }
+          else game
+            { record        = newBoard : bs
+            , whiteCaptures = whiteCaptures game + (S.size . members) deadGroup
+            }
+    in  ((), newGame)
+  )

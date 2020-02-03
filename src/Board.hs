@@ -23,7 +23,7 @@ data Space = Black | White | Empty deriving (Show, Eq, Ord)
 
 type Board = M.Map Position Space
 
--- TODO: Refactor record to include captures at each board state
+-- TODO: Refactor record to include captures / active player at each board state
 data Game = Game { boardSize :: Int
                  , record :: [Board]
                  , whiteCaptures :: Int
@@ -98,37 +98,59 @@ posToGroup pos = do
 
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move was valid, and if a group was captured
--- Use mapM to check all groups at once
 placeStone :: Position -> State Game Outcome
 placeStone pos = do
   setPosition pos
   neighbors <- filterM isOccupied (getNeighbors pos)
   adjGroups <- mapM posToGroup neighbors
-  resolvePlacement adjGroups
+  color     <- get >>= (pure . activePlayer)
+  outcome   <- resolvePlacement color adjGroups
+  resolveIllegalKo outcome
 
 -- Given surrounding groups, resolve stone placement + captures
--- IF same color surrounding group drops to 0 lib with a 0 lib other color, Kill
--- IF same color surrounding group drops to 0 lib without a 0 lib other color, then Suicide
--- IF other color surrounding group drops to 0 lib, Kill
--- IF resulting board is the same as the penultimate board, then IllegalKo
--- ELSE Nop 
--- If valid, update game record w/ killed groups, otherwise remove invalid state
-resolvePlacement :: [Group] -> State Game Outcome
-resolvePlacement groups | null zeroLibGroups = pure Nop
-                        | otherwise          = resolveKill zeroLibGroups
-  where zeroLibGroups = filter ((==) 0 . S.size . liberties) groups
-
-
-resolveKill :: [Group] -> State Game Outcome
-resolveKill zeroLibGroups = do
-  game <- get
-  let color  = activePlayer game
-      toKill = if color == Black then blackZLGroups else whiteZLGroups
-  mapM_ captureGroup toKill
-  pure Kill
+-- Does not handle IllegalKO
+resolvePlacement :: Space -> [Group] -> State Game Outcome
+resolvePlacement activePlayer groups
+  | null zeroLibGroups
+  = pure Nop
+  | activePlayer == Black && not (null blackZLGroups) && null whiteZLGroups
+  = resolveSuicide
+  | activePlayer == White && not (null whiteZLGroups) && null blackZLGroups
+  = resolveSuicide
+  | activePlayer == Black
+  = mapM_ captureGroup whiteZLGroups >> pure Kill
+  | activePlayer == White
+  = mapM_ captureGroup blackZLGroups >> pure Kill
+  | otherwise
+  = error "Somehow the active player is not white or black."
  where
+  zeroLibGroups = filter ((==) 0 . S.size . liberties) groups
   blackZLGroups = filter ((==) Black . color) zeroLibGroups
   whiteZLGroups = filter ((==) White . color) zeroLibGroups
+
+resolveIllegalKo :: Outcome -> State Game Outcome
+resolveIllegalKo o = do
+  illegalKo <- isIllegalKo
+  if illegalKo
+    then
+      state
+        (\game -> let b : bs = record game in (IllegalKo, game { record = bs })
+        )
+    else pure o
+
+
+isIllegalKo :: State Game Bool
+isIllegalKo =
+  get
+    >>= (pure . record)
+    >>= (\r -> case r of
+          k : k' : _ -> pure (k == k')
+          _          -> pure False
+        )
+
+resolveSuicide :: State Game Outcome
+resolveSuicide =
+  state (\game -> let b : bs = record game in (Suicide, game { record = bs }))
 
 -- Given a group, remove all members of that group and credit the player with captures
 captureGroup :: Group -> State Game ()

@@ -45,6 +45,7 @@ getPosition pos =
   state (\game -> (M.findWithDefault Empty pos (currentBoard game), game))
 
 -- TODO: Check if occupied and check if within bounds
+-- TODO: Refactor to return a maybe or either for better error handling?
 setPosition :: Position -> State Game ()
 setPosition pos = state
   (\game ->
@@ -109,6 +110,8 @@ placeStone pos = do
 
 -- Given surrounding groups, resolve stone placement + captures
 -- Does not handle IllegalKO
+-- TODO break out suicide logic into a separate function
+-- TODO rename to resolveCapture
 resolvePlacement :: Space -> [Group] -> State Game Outcome
 resolvePlacement activePlayer groups
   | null zeroLibGroups

@@ -1,10 +1,14 @@
+{-# LANGUAGE TemplateHaskell #-}
+
+
+
 module Board where
 
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
 import           Control.Monad.State
 import           Data.Maybe
-import           Data.Functor
+import           Control.Lens            hiding ( Empty )
 
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
@@ -26,29 +30,35 @@ data Space = Black | White | Empty deriving (Show, Eq, Ord)
 type Board = M.Map Position Space
 
 -- TODO: Refactor record to include captures / active player at each board state
-data Game = Game { boardSize :: Int
-                 , record :: [GameState]} deriving (Show)
+data Game = Game { _boardSize :: Int
+                 , _record :: [GameState]} deriving (Show)
 
-data GameState = GameState { board :: Board
-                           , toPlay :: Space
-                           , whiteCaptures :: Int
-                           , blackCaptures :: Int} deriving (Show)
+data GameState = GameState { _board :: Board
+                           , _toPlay :: Space
+                           , _captures :: M.Map Space Int} deriving (Show)
 
-data Group = Group { liberties :: S.Set Position
-                   , members :: S.Set Position
-                   , color :: Space} deriving (Show, Eq)
+data Group = Group { _liberties :: S.Set Position
+                   , _members :: S.Set Position
+                   , _color :: Space} deriving (Show, Eq)
 
-newGameState = GameState M.empty Black 0 0
+makeLenses ''Game
+makeLenses ''GameState
+makeLenses ''Group
+
+newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game 19 [newGameState]
 
+-- TODO: Refactor to use lens.
+-- Was struggling to deal with functional dependency of cons when using _head
 currentState :: State Game GameState
-currentState = gets (head . record)
+currentState = gets (head . view record)
 
 currentBoard :: State Game Board
-currentBoard = board <$> currentState
+currentBoard = view board <$> currentState
+
 
 activePlayer :: State Game Space
-activePlayer = toPlay <$> currentState
+activePlayer = view toPlay <$> currentState
 
 getPosition :: Position -> State Game Space
 getPosition pos = M.findWithDefault Empty pos <$> currentBoard
@@ -57,13 +67,9 @@ getPosition pos = M.findWithDefault Empty pos <$> currentBoard
 -- TODO: Refactor to return a maybe or either for better error handling?
 setPosition :: Position -> State Game ()
 setPosition pos = do
-  r        <- gets record
   newBoard <- M.insert pos <$> activePlayer <*> currentBoard
-  cs       <- currentState
-  g        <- get
-  let _ : rs   = r
-      newState = cs { board = newBoard }
-  put (g { record = newState : rs })
+  oldState <- use record
+  record %= (:) (head oldState & board .~ newBoard)
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
@@ -73,6 +79,7 @@ getNeighbors pos = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
 isOccupied :: Position -> State Game Bool
 isOccupied pos =
   getPosition pos >>= (\sp -> if sp == Empty then pure False else pure True)
+
 
 adjMatchingPos :: Space -> Position -> State Game (S.Set Position)
 adjMatchingPos sp pos = do
@@ -89,15 +96,13 @@ adjMatchingPos sp pos = do
 -- Find all neighbors, add same color unseen to members
 enumGroup :: Group -> State Game Group
 enumGroup group = do
-  newMembers <- foldM
-    (\ret m -> adjMatchingPos (color group) m >>= (pure . S.union ret))
-    (members group)
-    (members group)
-  newLiberties <- foldM
-    (\ret lib -> adjMatchingPos Empty lib >>= (pure . S.union ret))
-    (liberties group)
-    newMembers
-  let newGroup = group { members = newMembers, liberties = newLiberties }
+  let findSpaceOf sp =
+        foldM (\ret s -> adjMatchingPos sp s >>= (pure . S.union ret))
+  newMembers <- findSpaceOf (group ^. color)
+                            (group ^. members)
+                            (group ^. members)
+  newLiberties <- findSpaceOf Empty (group ^. liberties) newMembers
+  let newGroup = group { _members = newMembers, _liberties = newLiberties }
   if newGroup == group then pure newGroup else enumGroup newGroup
 
 
@@ -130,9 +135,9 @@ resolvePlacement activePlayer groups
   | null zeroLibGroups
   = pure Nop
   | activePlayer == Black && not (null blackZLGroups) && null whiteZLGroups
-  = resolveSuicide
+  = revokeRecord >> pure Suicide
   | activePlayer == White && not (null whiteZLGroups) && null blackZLGroups
-  = resolveSuicide
+  = revokeRecord >> pure Suicide
   | activePlayer == Black
   = mapM_ captureGroup whiteZLGroups >> pure Kill
   | activePlayer == White
@@ -140,50 +145,34 @@ resolvePlacement activePlayer groups
   | otherwise
   = error "Somehow the active player is not white or black."
  where
-  zeroLibGroups = filter ((==) 0 . S.size . liberties) groups
-  blackZLGroups = filter ((==) Black . color) zeroLibGroups
-  whiteZLGroups = filter ((==) White . color) zeroLibGroups
+  zeroLibGroups = filter ((==) 0 . S.size . _liberties) groups
+  blackZLGroups = filter ((==) Black . _color) zeroLibGroups
+  whiteZLGroups = filter ((==) White . _color) zeroLibGroups
+
+revokeRecord :: State Game ()
+revokeRecord = do
+  restRecord <- use (record . _tail)
+  record .= restRecord
+
 
 resolveIllegalKo :: Outcome -> State Game Outcome
 resolveIllegalKo o = do
   illegalKo <- isIllegalKo
-  if illegalKo
-    then
-      state
-        (\game -> let b : bs = record game in (IllegalKo, game { record = bs })
-        )
-    else pure o
+  if illegalKo then revokeRecord >> pure IllegalKo else pure o
 
 
 isIllegalKo :: State Game Bool
 isIllegalKo =
-  gets record
+  use record
     >>= (\r -> case r of
-          k : k' : _ -> pure (board k == board k')
+          k : k' : _ -> pure (k ^. board == k' ^. board)
           _          -> pure False
         )
-
-resolveSuicide :: State Game Outcome
-resolveSuicide =
-  state (\game -> let b : bs = record game in (Suicide, game { record = bs }))
 
 -- Given a group, remove all members of that group and credit the player with captures
 captureGroup :: Group -> State Game ()
 captureGroup deadGroup = do
-  cb <- currentBoard
-  cs <- currentState
-  ap <- activePlayer
-  let newBoard = M.filterWithKey (isMember deadGroup) cb
-      isMember tk pos _ = S.member pos (members tk)
-      newState = if ap == Black
-        then cs
-          { board         = newBoard
-          , blackCaptures = blackCaptures cs + (S.size . members) deadGroup
-          }
-        else cs
-          { board         = newBoard
-          , whiteCaptures = whiteCaptures cs + (S.size . members) deadGroup
-          }
-  newGame <-
-    get >>= (\g -> let s : ss = record g in pure g { record = newState : ss })
-  put newGame
+  record . _head . board %= M.filterWithKey
+    (\pos _ -> S.member pos (deadGroup ^. members))
+  record . _head . captures . ix Black += S.size (deadGroup ^. members)
+

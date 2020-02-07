@@ -9,7 +9,6 @@ import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.Except
-import           Control.Monad.Extra
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
 

@@ -24,7 +24,7 @@ type Position = Pair Int
 
 data Outcome = Success | Kill
 
-data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds deriving (Show, Eq)
+data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq)
 
 data Space = Black | White | Empty deriving (Show, Eq, Ord)
 
@@ -165,20 +165,25 @@ resolveCapture sp groups
   blackZLGroups = filter ((==) Black . _color) zeroLibGroups
   whiteZLGroups = filter ((==) White . _color) zeroLibGroups
 
-withinBounds :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
-withinBounds (Pair x y) = do
+checkBounds :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
+checkBounds (Pair x y) = do
   bs <- use boardSize
   if x >= 0 && y >= 0 && x < bs && y < bs then pure () else throwE OutOfBounds
 
-
+checkOccupied :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
+checkOccupied pos = do
+  o <- lift (isOccupied pos)
+  if o then throwE Occupied else pure ()
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move was valid, and if a group was captured
 placeStone :: Position -> ExceptT MoveError (MaybeT (State Game)) Outcome
 placeStone pos = do
-  withinBounds pos
+  checkBounds pos
+  checkOccupied pos
   lift (setPosition pos)
   neighbors <- lift (filterM isOccupied (getNeighbors pos))
   adjGroups <- lift (mapM posToGroup neighbors)
   color     <- lift activeSpace
   outcome   <- resolveCapture color adjGroups
+  revertWhenIllegalKo outcome
   revertWhenIllegalKo outcome

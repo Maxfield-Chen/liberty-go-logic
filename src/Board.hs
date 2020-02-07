@@ -67,7 +67,6 @@ swapActiveSpace White = Black
 getPosition :: Position -> MaybeT (State Game) Space
 getPosition pos = M.findWithDefault Empty pos <$> currentBoard
 
--- TODO: Check if occupied and check if within bounds
 setPosition :: Position -> MaybeT (State Game) ()
 setPosition pos = do
   newBoard  <- M.insert pos <$> activeSpace <*> currentBoard

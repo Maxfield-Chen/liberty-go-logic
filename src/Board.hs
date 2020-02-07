@@ -76,14 +76,12 @@ setPosition pos = do
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
-
 getNeighbors :: Position -> [Position]
 getNeighbors pos = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
 
 isOccupied :: Position -> MaybeT (State Game) Bool
 isOccupied pos =
   getPosition pos >>= (\sp -> if sp == Empty then pure False else pure True)
-
 
 adjMatchingPos :: Space -> Position -> MaybeT (State Game) (S.Set Position)
 adjMatchingPos sp pos = do
@@ -173,8 +171,10 @@ checkOccupied :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
 checkOccupied pos = do
   o <- lift (isOccupied pos)
   if o then throwE Occupied else pure ()
+
 -- Place a stone, updating the game record if the move is valid.
--- Returns an Outcome indicating if the move was valid, and if a group was captured
+-- Returns an Outcome indicating if the move resulted in a kill
+-- Throws a MoveError exception if the move was invalid
 placeStone :: Position -> ExceptT MoveError (MaybeT (State Game)) Outcome
 placeStone pos = do
   checkBounds pos

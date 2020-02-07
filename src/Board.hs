@@ -8,6 +8,8 @@ import           Control.Monad.State
 import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Maybe
+import           Control.Monad.Trans.Except
+import           Control.Monad.Extra
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
 
@@ -20,8 +22,9 @@ instance Applicative Pair where
 
 type Position = Pair Int
 
--- TODO split outcome into error and outcome to facilitate either
-data Outcome = Nop | NoBoard | Kill | IllegalKo | Suicide | OutOfBounds deriving (Show, Eq)
+data Outcome = Success | Kill
+
+data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds deriving (Show, Eq)
 
 data Space = Black | White | Empty deriving (Show, Eq, Ord)
 
@@ -48,9 +51,8 @@ newGame = Game 19 [newGameState]
 csl :: Traversal' Game GameState
 csl = record . _head
 
---TODO: Finish the transition to MaybeT
-currentState :: MaybeT (State Game) GameState
-currentState = MaybeT $ preuse csl
+currentGState :: MaybeT (State Game) GameState
+currentGState = MaybeT $ preuse csl
 
 currentBoard :: MaybeT (State Game) Board
 currentBoard = MaybeT $ preuse (csl . board)
@@ -68,9 +70,9 @@ getPosition pos = M.findWithDefault Empty pos <$> currentBoard
 -- TODO: Check if occupied and check if within bounds
 setPosition :: Position -> MaybeT (State Game) ()
 setPosition pos = do
-  newBoard <- M.insert pos <$> activeSpace <*> currentBoard
-  oldState <- currentState
-  record %= (:) (oldState & board .~ newBoard)
+  newBoard  <- M.insert pos <$> activeSpace <*> currentBoard
+  oldGState <- currentGState
+  record %= (:) (oldGState & board .~ newBoard)
   record . _head . toPlay %= swapActiveSpace
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
@@ -108,7 +110,6 @@ enumGroup group = do
   let newGroup = group { _members = newMembers, _liberties = newLiberties }
   if newGroup == group then pure newGroup else enumGroup newGroup
 
-
 -- Given a position, build the group associated with that position
 posToGroup :: Position -> MaybeT (State Game) Group
 posToGroup pos = do
@@ -116,8 +117,6 @@ posToGroup pos = do
   liberties <- adjMatchingPos color pos
   let newGroup = Group liberties (S.singleton pos) color
   enumGroup newGroup
-
-
 
 revokeRecord :: MaybeT (State Game) ()
 revokeRecord = do
@@ -132,10 +131,11 @@ isIllegalKo =
           _          -> pure False
         )
 
-resolveIllegalKo :: Outcome -> MaybeT (State Game) Outcome
-resolveIllegalKo o = do
-  illegalKo <- isIllegalKo
-  if illegalKo then revokeRecord >> pure IllegalKo else pure o
+revertWhenIllegalKo
+  :: Outcome -> ExceptT MoveError (MaybeT (State Game)) Outcome
+revertWhenIllegalKo o = do
+  illegalKo <- lift isIllegalKo
+  if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
 
 -- Given a group, remove all members of that group and credit the player with captures
 captureGroup :: Group -> MaybeT (State Game) ()
@@ -145,38 +145,40 @@ captureGroup deadGroup = do
   record . _head . captures . ix (_color deadGroup) += S.size
     (deadGroup ^. members)
 
-
--- Given surrounding groups, resolve stone placement + captures
--- Does not handle IllegalKO
--- TODO break out suicide logic into a separate function
--- TODO rename to resolveCapture
-resolvePlacement :: Space -> [Group] -> MaybeT (State Game) Outcome
-resolvePlacement activeSpace groups
+-- Given surrounding groups, resolve stone captures + suicide
+resolveCapture
+  :: Space -> [Group] -> ExceptT MoveError (MaybeT (State Game)) Outcome
+resolveCapture sp groups
   | null zeroLibGroups
-  = pure Nop
-  | activeSpace == Black && not (null blackZLGroups) && null whiteZLGroups
-  = revokeRecord >> pure Suicide
-  | activeSpace == White && not (null whiteZLGroups) && null blackZLGroups
-  = revokeRecord >> pure Suicide
-  | activeSpace == Black
-  = mapM_ captureGroup whiteZLGroups >> pure Kill
-  | activeSpace == White
-  = mapM_ captureGroup blackZLGroups >> pure Kill
+  = pure Success
+  | (sp == Black && not (null blackZLGroups) && null whiteZLGroups)
+    || (sp == White && not (null whiteZLGroups) && null blackZLGroups)
+  = lift revokeRecord >> throwE Suicide
+  | sp == Black
+  = lift (mapM_ captureGroup whiteZLGroups) >> pure Kill
+  | sp == White
+  = lift (mapM_ captureGroup blackZLGroups) >> pure Kill
   | otherwise
-  = error "Somehow the active player is not white or black."
+  = throwE IllegalPlayer
  where
   zeroLibGroups = filter ((==) 0 . S.size . _liberties) groups
   blackZLGroups = filter ((==) Black . _color) zeroLibGroups
   whiteZLGroups = filter ((==) White . _color) zeroLibGroups
 
+withinBounds :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
+withinBounds (Pair x y) = do
+  bs <- use boardSize
+  if x >= 0 && y >= 0 && x < bs && y < bs then pure () else throwE OutOfBounds
+
 
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move was valid, and if a group was captured
-placeStone :: Position -> MaybeT (State Game) Outcome
+placeStone :: Position -> ExceptT MoveError (MaybeT (State Game)) Outcome
 placeStone pos = do
-  setPosition pos
-  neighbors <- filterM isOccupied (getNeighbors pos)
-  adjGroups <- mapM posToGroup neighbors
-  color     <- activeSpace
-  outcome   <- resolvePlacement color adjGroups
-  resolveIllegalKo outcome
+  withinBounds pos
+  lift (setPosition pos)
+  neighbors <- lift (filterM isOccupied (getNeighbors pos))
+  adjGroups <- lift (mapM posToGroup neighbors)
+  color     <- lift activeSpace
+  outcome   <- resolveCapture color adjGroups
+  revertWhenIllegalKo outcome

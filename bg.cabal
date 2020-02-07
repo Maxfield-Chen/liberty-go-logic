@@ -21,3 +21,4 @@ executable bg
                       ,containers
                       ,mtl
                       ,lens
+                      ,transformers

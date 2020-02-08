@@ -44,29 +44,32 @@ makeLenses ''Game
 makeLenses ''GameState
 makeLenses ''Group
 
+type ExceptMaybeGame a = ExceptT MoveError (MaybeT (State Game)) a
+type MaybeGame a = MaybeT (State Game) a
+
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game 19 [newGameState]
 
 csl :: Traversal' Game GameState
 csl = record . _head
 
-currentGState :: MaybeT (State Game) GameState
+currentGState :: MaybeGame GameState
 currentGState = MaybeT $ preuse csl
 
-currentBoard :: MaybeT (State Game) Board
+currentBoard :: MaybeGame Board
 currentBoard = MaybeT $ preuse (csl . board)
 
-activeSpace :: MaybeT (State Game) Space
+activeSpace :: MaybeGame Space
 activeSpace = MaybeT $ preuse (csl . toPlay)
 
 swapActiveSpace :: Space -> Space
 swapActiveSpace Black = White
 swapActiveSpace White = Black
 
-getPosition :: Position -> MaybeT (State Game) Space
+getPosition :: Position -> MaybeGame Space
 getPosition pos = M.findWithDefault Empty pos <$> currentBoard
 
-setPosition :: Position -> MaybeT (State Game) ()
+setPosition :: Position -> MaybeGame ()
 setPosition pos = do
   newBoard  <- M.insert pos <$> activeSpace <*> currentBoard
   oldGState <- currentGState
@@ -78,11 +81,11 @@ neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 getNeighbors :: Position -> [Position]
 getNeighbors pos = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
 
-isOccupied :: Position -> MaybeT (State Game) Bool
+isOccupied :: Position -> MaybeGame Bool
 isOccupied pos =
   getPosition pos >>= (\sp -> if sp == Empty then pure False else pure True)
 
-adjMatchingPos :: Space -> Position -> MaybeT (State Game) (S.Set Position)
+adjMatchingPos :: Space -> Position -> MaybeGame (S.Set Position)
 adjMatchingPos sp pos = do
   let neighbors = getNeighbors pos
   spaces <- mapM getPosition neighbors
@@ -95,7 +98,7 @@ adjMatchingPos sp pos = do
 -- Enum a group by adding all neighbors of members + their liberties
 -- Base Case: return if new group == old group
 -- Find all neighbors, add same color unseen to members
-enumGroup :: Group -> MaybeT (State Game) Group
+enumGroup :: Group -> MaybeGame Group
 enumGroup group = do
   let findSpaceOf sp =
         foldM (\ret s -> adjMatchingPos sp s >>= (pure . S.union ret))
@@ -107,19 +110,19 @@ enumGroup group = do
   if newGroup == group then pure newGroup else enumGroup newGroup
 
 -- Given a position, build the group associated with that position
-posToGroup :: Position -> MaybeT (State Game) Group
+posToGroup :: Position -> MaybeGame Group
 posToGroup pos = do
   color     <- getPosition pos
   liberties <- adjMatchingPos color pos
   let newGroup = Group liberties (S.singleton pos) color
   enumGroup newGroup
 
-revokeRecord :: MaybeT (State Game) ()
+revokeRecord :: MaybeGame ()
 revokeRecord = do
   restRecord <- use (record . _tail)
   record .= restRecord
 
-isIllegalKo :: MaybeT (State Game) Bool
+isIllegalKo :: State Game Bool
 isIllegalKo =
   use record
     >>= (\r -> case r of
@@ -127,14 +130,13 @@ isIllegalKo =
           _          -> pure False
         )
 
-revertWhenIllegalKo
-  :: Outcome -> ExceptT MoveError (MaybeT (State Game)) Outcome
+revertWhenIllegalKo :: Outcome -> ExceptMaybeGame Outcome
 revertWhenIllegalKo o = do
-  illegalKo <- lift isIllegalKo
+  illegalKo <- (lift . lift) isIllegalKo
   if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
 
 -- Given a group, remove all members of that group and credit the player with captures
-captureGroup :: Group -> MaybeT (State Game) ()
+captureGroup :: Group -> MaybeGame ()
 captureGroup deadGroup = do
   record . _head . board %= M.filterWithKey
     (\pos _ -> not $ S.member pos (deadGroup ^. members))
@@ -142,8 +144,7 @@ captureGroup deadGroup = do
     (deadGroup ^. members)
 
 -- Given surrounding groups, resolve stone captures + suicide
-resolveCapture
-  :: Space -> [Group] -> ExceptT MoveError (MaybeT (State Game)) Outcome
+resolveCapture :: Space -> [Group] -> ExceptMaybeGame Outcome
 resolveCapture sp groups
   | null zeroLibGroups
   = pure Success
@@ -161,12 +162,12 @@ resolveCapture sp groups
   blackZLGroups = filter ((==) Black . _color) zeroLibGroups
   whiteZLGroups = filter ((==) White . _color) zeroLibGroups
 
-checkBounds :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
+checkBounds :: Position -> ExceptMaybeGame ()
 checkBounds (Pair x y) = do
   bs <- use boardSize
   if x >= 0 && y >= 0 && x < bs && y < bs then pure () else throwE OutOfBounds
 
-checkOccupied :: Position -> ExceptT MoveError (MaybeT (State Game)) ()
+checkOccupied :: Position -> ExceptMaybeGame ()
 checkOccupied pos = do
   o <- lift (isOccupied pos)
   if o then throwE Occupied else pure ()
@@ -174,7 +175,8 @@ checkOccupied pos = do
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
-placeStone :: Position -> ExceptT MoveError (MaybeT (State Game)) Outcome
+-- TODO: Figure out how to remove lift calls: https://stackoverflow.com/questions/9054731/avoiding-lift-with-monad-transformers
+placeStone :: Position -> ExceptMaybeGame Outcome
 placeStone pos = do
   checkBounds pos
   checkOccupied pos
@@ -183,5 +185,4 @@ placeStone pos = do
   adjGroups <- lift (mapM posToGroup neighbors)
   color     <- lift activeSpace
   outcome   <- resolveCapture color adjGroups
-  revertWhenIllegalKo outcome
   revertWhenIllegalKo outcome

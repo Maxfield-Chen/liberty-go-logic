@@ -22,4 +22,4 @@ executable bg
                       ,mtl
                       ,lens
                       ,transformers
-                      ,extra
+                      ,HUnit == 1.6.0.0

@@ -211,6 +211,7 @@ placeStone pos = do
   bNeighbors <- adjMatchingPos White pos
   wNeighbors <- adjMatchingPos Black pos
   adjGroups  <- mapM posToGroup (S.toList (bNeighbors `S.union` wNeighbors))
+  curGroup   <- posToGroup pos
   player     <- getPosition pos
-  outcome    <- resolveCapture player adjGroups
+  outcome    <- resolveCapture player (curGroup : adjGroups)
   revertWhenIllegalKo outcome

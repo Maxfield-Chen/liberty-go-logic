@@ -12,6 +12,8 @@ import           Data.Sort
 
 
 inProgressBoard = M.fromList [(Pair 0 0, Black)]
+suicideBoard = M.fromList
+  [(Pair 2 1, White), (Pair 3 0, White), (Pair 3 2, White), (Pair 4 1, White)]
 groupBoard =
   M.fromList [(Pair 0 0, Black), (Pair 0 1, Black), (Pair 0 2, Black)]
 --  X is black, o is White, Black to play
@@ -35,11 +37,13 @@ k3GS = GameState k3Board Black (M.fromList [(Black, 1), (White, 1)])
 k1Game = Game 19 [k1GS]
 k2Game = Game 19 [k2GS, k1GS]
 k3Game = Game 19 [k3GS, k2GS, k1GS]
+suicideGS = GameState suicideBoard Black (M.fromList [(Black, 0), (White, 0)])
 inProgressGS =
   GameState inProgressBoard White (M.fromList [(Black, 0), (White, 0)])
 inProgressGame = Game 19 [inProgressGS, newGameState]
 groupGS = GameState groupBoard White (M.fromList [(Black, 0), (White, 0)])
 groupGame = Game 19 [groupGS]
+suicideGame = Game 19 [suicideGS]
 
 testCurrentGState = TestCase
   (assertEqual "for currentGState with begun game,"
@@ -245,14 +249,21 @@ testPlaceStoneValidKill = TestCase
                (runState (runExceptT (placeStone (Pair 3 1))) k1Game)
   )
 
+testPlaceStoneValidSuicide = TestCase
+  (assertEqual "for placeStone when Valid with a Suicide"
+               (Left Suicide, suicideGame)
+               (runState (runExceptT (placeStone (Pair 3 1))) suicideGame)
+  )
+
 setters = TestList
-  [ TestLabel "SetPositionValid"          testSetPositionValid
-  , TestLabel "SetPositionOOB"            testSetPositionOOB
-  , TestLabel "SetPositionOccupied"       testSetPositionOccupied
-  , TestLabel "testRevertWhenIllegalKo"   testRevertWhenIllegalKo
-  , TestLabel "testRevertWhenIllegalNoKo" testRevertWhenIllegalNoKo
-  , TestLabel "testPlaceStoneValidKill"   testPlaceStoneValidKill
-  , TestLabel "testPlaceStoneValidNoKill" testPlaceStoneValidNoKill
+  [ TestLabel "SetPositionValid"           testSetPositionValid
+  , TestLabel "SetPositionOOB"             testSetPositionOOB
+  , TestLabel "SetPositionOccupied"        testSetPositionOccupied
+  , TestLabel "testRevertWhenIllegalKo"    testRevertWhenIllegalKo
+  , TestLabel "testRevertWhenIllegalNoKo"  testRevertWhenIllegalNoKo
+  , TestLabel "testPlaceStoneValidKill"    testPlaceStoneValidKill
+  , TestLabel "testPlaceStoneValidNoKill"  testPlaceStoneValidNoKill
+  , TestLabel "testPlaceStoneValidSuicide" testPlaceStoneValidSuicide
   ]
 
 

@@ -82,6 +82,8 @@ getPosition pos = do
   checkBounds pos
   M.findWithDefault Empty pos <$> currentBoard
 
+-- setPosition creates a new GameState from the previous gameState
+-- with the new stone added. 
 setPosition :: Position -> ExceptGame ()
 setPosition pos = do
   checkBounds pos
@@ -93,8 +95,26 @@ setPosition pos = do
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
-getNeighbors :: Position -> [Position]
-getNeighbors pos = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
+getNeighbors :: Position -> ExceptGame [Position]
+getNeighbors pos = do
+  checkBounds pos
+  let neighbors = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
+  lift $ filterM isWithinBounds neighbors
+
+checkBounds :: Position -> ExceptGame ()
+checkBounds pos = do
+  oob <- lift (isWithinBounds pos)
+  if oob then pure () else throwE OutOfBounds
+
+isWithinBounds :: Position -> State Game Bool
+isWithinBounds (Pair x y) = do
+  bs <- use boardSize
+  pure (x >= 0 && y >= 0 && x < bs && y < bs)
+
+checkOccupied :: Position -> ExceptGame ()
+checkOccupied pos = do
+  o <- isOccupied pos
+  if o then throwE Occupied else pure ()
 
 isOccupied :: Position -> ExceptGame Bool
 isOccupied pos = do
@@ -102,11 +122,19 @@ isOccupied pos = do
   space <- getPosition pos
   pure (space /= Empty)
 
+isIllegalKo :: State Game Bool
+isIllegalKo =
+  use record
+    >>= (\r -> case r of
+          k : k' : _ -> pure (k ^. board == k' ^. board)
+          _          -> pure False
+        )
+
 -- TODO: Account for edge of board logic here
 adjMatchingPos :: Space -> Position -> ExceptGame (S.Set Position)
 adjMatchingPos sp pos = do
-  let neighbors = getNeighbors pos
-  spaces <- mapM getPosition neighbors
+  neighbors <- getNeighbors pos
+  spaces    <- mapM getPosition neighbors
   let liberties = foldr
         (\(p, curSpace) ret -> if sp == curSpace then S.insert p ret else ret)
         S.empty
@@ -140,14 +168,6 @@ revokeRecord = do
   restRecord <- use (record . _tail)
   record .= restRecord
 
-isIllegalKo :: State Game Bool
-isIllegalKo =
-  use record
-    >>= (\r -> case r of
-          k : k' : _ -> pure (k ^. board == k' ^. board)
-          _          -> pure False
-        )
-
 revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
 revertWhenIllegalKo o = do
   illegalKo <- lift isIllegalKo
@@ -180,24 +200,14 @@ resolveCapture sp groups
   blackZLGroups = filter ((==) Black . _color) zeroLibGroups
   whiteZLGroups = filter ((==) White . _color) zeroLibGroups
 
-checkBounds :: Position -> ExceptGame ()
-checkBounds (Pair x y) = do
-  bs <- use boardSize
-  if x >= 0 && y >= 0 && x < bs && y < bs then pure () else throwE OutOfBounds
-
-checkOccupied :: Position -> ExceptGame ()
-checkOccupied pos = do
-  o <- isOccupied pos
-  if o then throwE Occupied else pure ()
 
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
--- TODO: Figure out how to remove lift calls: https://stackoverflow.com/questions/9054731/avoiding-lift-with-monad-transformers
 placeStone :: Position -> ExceptGame Outcome
 placeStone pos = do
   setPosition pos
-  neighbors <- filterM isOccupied (getNeighbors pos)
+  neighbors <- getNeighbors pos
   adjGroups <- mapM posToGroup neighbors
   color     <- activeSpace
   outcome   <- resolveCapture color adjGroups

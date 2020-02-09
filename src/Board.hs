@@ -21,7 +21,7 @@ instance Applicative Pair where
 
 type Position = Pair Int
 
-data Outcome = Success | Kill
+data Outcome = NoKill | Kill deriving (Eq, Show)
 
 data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq)
 
@@ -38,7 +38,7 @@ data GameState = GameState { _board :: Board
 
 data Group = Group { _liberties :: S.Set Position
                    , _members :: S.Set Position
-                   , _color :: Space} deriving (Show, Eq)
+                   , _player :: Space} deriving (Show, Eq)
 
 makeLenses ''Game
 makeLenses ''GameState
@@ -66,16 +66,16 @@ currentBoard = do
     Just b  -> pure b
     Nothing -> throwE NoBoard
 
-activeSpace :: ExceptGame Space
-activeSpace = do
+nextToPlay :: ExceptGame Space
+nextToPlay = do
   maybeActiveSpace <- preuse (csl . toPlay)
   case maybeActiveSpace of
     Just ap -> pure ap
     Nothing -> throwE NoBoard
 
-swapActiveSpace :: Space -> Space
-swapActiveSpace Black = White
-swapActiveSpace White = Black
+swapPlayer :: Space -> Space
+swapPlayer Black = White
+swapPlayer White = Black
 
 getPosition :: Position -> ExceptGame Space
 getPosition pos = do
@@ -87,11 +87,11 @@ getPosition pos = do
 setPosition :: Position -> ExceptGame ()
 setPosition pos = do
   checkBounds pos
-  isOccupied pos
-  newBoard  <- M.insert pos <$> activeSpace <*> currentBoard
+  checkOccupied pos
+  newBoard  <- M.insert pos <$> nextToPlay <*> currentBoard
   oldGState <- currentGState
   record %= (:) (oldGState & board .~ newBoard)
-  record . _head . toPlay %= swapActiveSpace
+  record . _head . toPlay %= swapPlayer
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
@@ -126,29 +126,29 @@ isIllegalKo :: State Game Bool
 isIllegalKo =
   use record
     >>= (\r -> case r of
-          k : k' : _ -> pure (k ^. board == k' ^. board)
-          _          -> pure False
+          k : _ : k' : _ -> pure (k ^. board == k' ^. board)
+          _              -> pure False
         )
 
--- TODO: Account for edge of board logic here
 adjMatchingPos :: Space -> Position -> ExceptGame (S.Set Position)
 adjMatchingPos sp pos = do
   neighbors <- getNeighbors pos
-  spaces    <- mapM getPosition neighbors
-  let liberties = foldr
-        (\(p, curSpace) ret -> if sp == curSpace then S.insert p ret else ret)
-        S.empty
-        (zip neighbors spaces)
-  pure liberties
+  foldM
+    (\ret p -> do
+      curSpace <- getPosition p
+      if curSpace == sp then pure (S.insert p ret) else pure ret
+    )
+    S.empty
+    neighbors
 
 -- Enum a group by adding all neighbors of members + their liberties
 -- Base Case: return if new group == old group
--- Find all neighbors, add same color unseen to members
+-- Find all neighbors, add same player unseen to members
 enumGroup :: Group -> ExceptGame Group
 enumGroup group = do
   let findSpaceOf sp =
         foldM (\ret s -> adjMatchingPos sp s >>= (pure . S.union ret))
-  newMembers <- findSpaceOf (group ^. color)
+  newMembers <- findSpaceOf (group ^. player)
                             (group ^. members)
                             (group ^. members)
   newLiberties <- findSpaceOf Empty (group ^. liberties) newMembers
@@ -158,34 +158,35 @@ enumGroup group = do
 -- Given a position, build the group associated with that position
 posToGroup :: Position -> ExceptGame Group
 posToGroup pos = do
-  color     <- getPosition pos
-  liberties <- adjMatchingPos color pos
-  let newGroup = Group liberties (S.singleton pos) color
+  player    <- getPosition pos
+  liberties <- adjMatchingPos Empty pos
+  let newGroup = Group liberties (S.singleton pos) player
   enumGroup newGroup
 
 revokeRecord :: State Game ()
 revokeRecord = do
-  restRecord <- use (record . _tail)
-  record .= restRecord
+  restRecord <- use record
+  record .= tail restRecord
 
 revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
 revertWhenIllegalKo o = do
   illegalKo <- lift isIllegalKo
   if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
 
--- Given a group, remove all members of that group and credit the player with captures
+-- Given a group, remove all members of that group 
+-- credit the opposing player with captures
 captureGroup :: Group -> ExceptGame ()
 captureGroup deadGroup = do
   record . _head . board %= M.filterWithKey
     (\pos _ -> not $ S.member pos (deadGroup ^. members))
-  record . _head . captures . ix (_color deadGroup) += S.size
+  record . _head . captures . ix ((swapPlayer . _player) deadGroup) += S.size
     (deadGroup ^. members)
 
 -- Given surrounding groups, resolve stone captures + suicide
 resolveCapture :: Space -> [Group] -> ExceptGame Outcome
 resolveCapture sp groups
   | null zeroLibGroups
-  = pure Success
+  = pure NoKill
   | (sp == Black && not (null blackZLGroups) && null whiteZLGroups)
     || (sp == White && not (null whiteZLGroups) && null blackZLGroups)
   = lift revokeRecord >> throwE Suicide
@@ -197,8 +198,8 @@ resolveCapture sp groups
   = throwE IllegalPlayer
  where
   zeroLibGroups = filter ((==) 0 . S.size . _liberties) groups
-  blackZLGroups = filter ((==) Black . _color) zeroLibGroups
-  whiteZLGroups = filter ((==) White . _color) zeroLibGroups
+  blackZLGroups = filter ((==) Black . _player) zeroLibGroups
+  whiteZLGroups = filter ((==) White . _player) zeroLibGroups
 
 
 -- Place a stone, updating the game record if the move is valid.
@@ -207,8 +208,9 @@ resolveCapture sp groups
 placeStone :: Position -> ExceptGame Outcome
 placeStone pos = do
   setPosition pos
-  neighbors <- getNeighbors pos
-  adjGroups <- mapM posToGroup neighbors
-  color     <- activeSpace
-  outcome   <- resolveCapture color adjGroups
+  bNeighbors <- adjMatchingPos White pos
+  wNeighbors <- adjMatchingPos Black pos
+  adjGroups  <- mapM posToGroup (S.toList (bNeighbors `S.union` wNeighbors))
+  player     <- getPosition pos
+  outcome    <- resolveCapture player adjGroups
   revertWhenIllegalKo outcome

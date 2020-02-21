@@ -7,7 +7,6 @@ import qualified Data.Set                      as S
 import           Control.Monad.State
 import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
-import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.Except
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
@@ -46,8 +45,9 @@ makeLenses ''Group
 
 type ExceptGame a = ExceptT MoveError (State Game) a
 
+standardBoardSize = 19
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
-newGame = Game 19 [newGameState]
+newGame = Game standardBoardSize [newGameState]
 
 csl :: Traversal' Game GameState
 csl = record . _head

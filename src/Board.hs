@@ -52,35 +52,18 @@ newGame = Game standardBoardSize [newGameState]
 csl :: Traversal' Game GameState
 csl = record . _head
 
-currentGState :: ExceptGame GameState
-currentGState = do
-  mgs <- preuse csl
-  case mgs of
-    Just gs -> pure gs
-    Nothing -> throwE NoBoard
+currentBoard :: Game -> Board
+currentBoard game = fromMaybe M.empty (preview (csl . board) game)
 
-currentBoard :: ExceptGame Board
-currentBoard = do
-  mb <- preuse (csl . board)
-  case mb of
-    Just b  -> pure b
-    Nothing -> throwE NoBoard
-
-nextToPlay :: ExceptGame Space
-nextToPlay = do
-  maybeActiveSpace <- preuse (csl . toPlay)
-  case maybeActiveSpace of
-    Just ap -> pure ap
-    Nothing -> throwE NoBoard
+nextToPlay :: Game -> Space
+nextToPlay game = fromMaybe Black (preview (csl . toPlay) game)
 
 swapPlayer :: Space -> Space
 swapPlayer Black = White
 swapPlayer White = Black
 
-getPosition :: Position -> ExceptGame Space
-getPosition pos = do
-  checkBounds pos
-  M.findWithDefault Empty pos <$> currentBoard
+getPosition :: Position -> Game -> Space
+getPosition pos game = M.findWithDefault Empty pos (currentBoard game)
 
 -- setPosition creates a new GameState from the previous gameState
 -- with the new stone added. 
@@ -88,28 +71,35 @@ setPosition :: Position -> ExceptGame ()
 setPosition pos = do
   checkBounds pos
   checkOccupied pos
-  newBoard  <- M.insert pos <$> nextToPlay <*> currentBoard
-  oldGState <- currentGState
+  oldGState <- lift $ gets (fromMaybe newGameState . preview csl)
+  ntp       <- lift $ gets nextToPlay
+  cb        <- lift $ gets currentBoard
+  let newBoard = M.insert pos ntp cb
   record %= (:) (oldGState & board .~ newBoard)
   record . _head . toPlay %= swapPlayer
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
-getNeighbors :: Position -> ExceptGame [Position]
-getNeighbors pos = do
-  checkBounds pos
+getNeighbors :: Position -> Game -> [Position]
+getNeighbors pos game =
   let neighbors = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
-  lift $ filterM isWithinBounds neighbors
+  in  filter (bounded (view boardSize game)) neighbors
 
+-- TODO: Having 3 functions do the same thing is atrocious. Look to migrate away from state
+-- and exceptT as much as possible.
+-- TODO: Replace ExceptT with GDP style validation
 checkBounds :: Position -> ExceptGame ()
 checkBounds pos = do
   oob <- lift (isWithinBounds pos)
   if oob then pure () else throwE OutOfBounds
 
 isWithinBounds :: Position -> State Game Bool
-isWithinBounds (Pair x y) = do
+isWithinBounds pos = do
   bs <- use boardSize
-  pure (x >= 0 && y >= 0 && x < bs && y < bs)
+  pure $ bounded bs pos
+
+bounded :: Int -> Position -> Bool
+bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs
 
 checkOccupied :: Position -> ExceptGame ()
 checkOccupied pos = do
@@ -119,49 +109,45 @@ checkOccupied pos = do
 isOccupied :: Position -> ExceptGame Bool
 isOccupied pos = do
   checkBounds pos
-  space <- getPosition pos
+  space <- lift (gets (getPosition pos))
   pure (space /= Empty)
 
-isIllegalKo :: State Game Bool
-isIllegalKo =
-  use record
-    >>= (\r -> case r of
-          k : _ : k' : _ -> pure (k ^. board == k' ^. board)
-          _              -> pure False
-        )
+isIllegalKo :: Game -> Bool
+isIllegalKo game = case view record game of
+  k : _ : k' : _ -> k ^. board == k' ^. board
+  _              -> False
 
-adjMatchingPos :: Space -> Position -> ExceptGame (S.Set Position)
-adjMatchingPos sp pos = do
-  neighbors <- getNeighbors pos
-  foldM
-    (\ret p -> do
-      curSpace <- getPosition p
-      if curSpace == sp then pure (S.insert p ret) else pure ret
-    )
-    S.empty
-    neighbors
+
+adjMatchingPos :: Space -> Position -> Game -> S.Set Position
+adjMatchingPos sp pos game =
+  let neighbors = getNeighbors pos game
+  in  foldl
+        (\ret p -> if getPosition p game == sp then S.insert p ret else ret)
+        S.empty
+        neighbors
 
 -- Enum a group by adding all neighbors of members + their liberties
 -- Base Case: return if new group == old group
 -- Find all neighbors, add same player unseen to members
-enumGroup :: Group -> ExceptGame Group
-enumGroup group = do
-  let findSpaceOf sp =
-        foldM (\ret s -> adjMatchingPos sp s >>= (pure . S.union ret))
-  newMembers <- findSpaceOf (group ^. player)
-                            (group ^. members)
-                            (group ^. members)
-  newLiberties <- findSpaceOf Empty (group ^. liberties) newMembers
-  let newGroup = group { _members = newMembers, _liberties = newLiberties }
-  if newGroup == group then pure newGroup else enumGroup newGroup
+enumGroup :: Group -> Game -> Group
+enumGroup group game =
+  let findSpaceOf sp game =
+          foldl (\ret s -> adjMatchingPos sp s game `S.union` ret)
+      newMembers = findSpaceOf (group ^. player)
+                               game
+                               (group ^. members)
+                               (group ^. members)
+      newLiberties = findSpaceOf Empty game (group ^. liberties) newMembers
+      newGroup     = group { _members = newMembers, _liberties = newLiberties }
+  in  if newGroup == group then newGroup else enumGroup newGroup game
 
 -- Given a position, build the group associated with that position
-posToGroup :: Position -> ExceptGame Group
-posToGroup pos = do
-  player    <- getPosition pos
-  liberties <- adjMatchingPos Empty pos
-  let newGroup = Group liberties (S.singleton pos) player
-  enumGroup newGroup
+posToGroup :: Position -> Game -> Group
+posToGroup pos game =
+  let player    = getPosition pos game
+      liberties = adjMatchingPos Empty pos game
+      newGroup  = Group liberties (S.singleton pos) player
+  in  enumGroup newGroup game
 
 revokeRecord :: State Game ()
 revokeRecord = do
@@ -170,7 +156,7 @@ revokeRecord = do
 
 revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
 revertWhenIllegalKo o = do
-  illegalKo <- lift isIllegalKo
+  illegalKo <- lift $ gets isIllegalKo
   if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
 
 -- Given a group, remove all members of that group 
@@ -208,10 +194,13 @@ resolveCapture sp groups
 placeStone :: Position -> ExceptGame Outcome
 placeStone pos = do
   setPosition pos
-  bNeighbors <- adjMatchingPos White pos
-  wNeighbors <- adjMatchingPos Black pos
-  adjGroups  <- mapM posToGroup (S.toList (bNeighbors `S.union` wNeighbors))
-  curGroup   <- posToGroup pos
-  player     <- getPosition pos
-  outcome    <- resolveCapture player (curGroup : adjGroups)
+  bNeighbors <- lift (gets $ adjMatchingPos White pos)
+  wNeighbors <- lift (gets $ adjMatchingPos Black pos)
+  adjGroups  <- lift
+    (gets $ \game ->
+      map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
+    )
+  curGroup <- lift (gets $ posToGroup pos)
+  player   <- lift (gets $ getPosition pos)
+  outcome  <- resolveCapture player (curGroup : adjGroups)
   revertWhenIllegalKo outcome

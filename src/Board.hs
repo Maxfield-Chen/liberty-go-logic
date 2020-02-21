@@ -122,7 +122,10 @@ adjMatchingPos :: Space -> Position -> Game -> S.Set Position
 adjMatchingPos sp pos game =
   let neighbors = getNeighbors pos game
   in  foldl
-        (\ret p -> if getPosition p game == sp then S.insert p ret else ret)
+        (\ret neighborPos -> if getPosition neighborPos game == sp
+          then S.insert neighborPos ret
+          else ret
+        )
         S.empty
         neighbors
 

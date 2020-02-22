@@ -49,22 +49,35 @@ standardBoardSize = 19
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game standardBoardSize [newGameState]
 
+printBoard :: Game -> IO ()
+printBoard game = do
+  let boardPositions = [ [ Pair x y | x <- [0 .. 18] ] | y <- [0 .. 18] ]
+  mapM_
+    (\row ->
+      putStrLn "" >> mapM_ (putStr . (++ " ") . show . (`getPosition` game)) row
+    )
+    boardPositions
+
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
 placeStone :: Position -> ExceptGame Outcome
 placeStone pos = do
   setPosition pos
-  bNeighbors <- lift (gets $ adjMatchingPos White pos)
-  wNeighbors <- lift (gets $ adjMatchingPos Black pos)
-  adjGroups  <- lift
-    (gets $ \game ->
-      map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
-    )
-  curGroup <- lift (gets $ posToGroup pos)
-  player   <- lift (gets $ getPosition pos)
-  outcome  <- resolveCapture player (curGroup : adjGroups)
+  groups  <- lift $ gets (surroundingGroups pos)
+  player  <- lift $ gets (getPosition pos)
+  outcome <- resolveCapture player groups
   revertWhenIllegalKo outcome
+
+surroundingGroups :: Position -> Game -> [Group]
+surroundingGroups pos game =
+  let bNeighbors = adjMatchingPos White pos game
+      wNeighbors = adjMatchingPos Black pos game
+      adjGroups =
+          map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
+      curGroup = posToGroup pos game
+      player   = nextToPlay game
+  in  curGroup : adjGroups
 
 -- Given a group, remove all members of that group 
 -- credit the opposing player with captures

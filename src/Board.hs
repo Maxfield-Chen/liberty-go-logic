@@ -49,6 +49,74 @@ standardBoardSize = 19
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game standardBoardSize [newGameState]
 
+-- Place a stone, updating the game record if the move is valid.
+-- Returns an Outcome indicating if the move resulted in a kill
+-- Throws a MoveError exception if the move was invalid
+placeStone :: Position -> ExceptGame Outcome
+placeStone pos = do
+  setPosition pos
+  bNeighbors <- lift (gets $ adjMatchingPos White pos)
+  wNeighbors <- lift (gets $ adjMatchingPos Black pos)
+  adjGroups  <- lift
+    (gets $ \game ->
+      map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
+    )
+  curGroup <- lift (gets $ posToGroup pos)
+  player   <- lift (gets $ getPosition pos)
+  outcome  <- resolveCapture player (curGroup : adjGroups)
+  revertWhenIllegalKo outcome
+
+-- Given a group, remove all members of that group 
+-- credit the opposing player with captures
+captureGroup :: Group -> ExceptGame ()
+captureGroup deadGroup = do
+  record . _head . board %= M.filterWithKey
+    (\pos _ -> not $ S.member pos (deadGroup ^. members))
+  record . _head . captures . ix ((swapPlayer . _player) deadGroup) += S.size
+    (deadGroup ^. members)
+
+-- Given surrounding groups, resolve stone captures + suicide
+resolveCapture :: Space -> [Group] -> ExceptGame Outcome
+resolveCapture sp groups
+  | null zeroLibGroups
+  = pure NoKill
+  | (sp == Black && not (null blackZLGroups) && null whiteZLGroups)
+    || (sp == White && not (null whiteZLGroups) && null blackZLGroups)
+  = lift revokeRecord >> throwE Suicide
+  | sp == Black
+  = mapM_ captureGroup whiteZLGroups >> pure Kill
+  | sp == White
+  = mapM_ captureGroup blackZLGroups >> pure Kill
+  | otherwise
+  = throwE IllegalPlayer
+ where
+  zeroLibGroups = filter ((==) 0 . S.size . _liberties) groups
+  blackZLGroups = filter ((==) Black . _player) zeroLibGroups
+  whiteZLGroups = filter ((==) White . _player) zeroLibGroups
+
+-- setPosition creates a new GameState from the previous gameState
+-- with the new stone added. 
+setPosition :: Position -> ExceptGame ()
+setPosition pos = do
+  checkBounds pos
+  checkOccupied pos
+  oldGState <- lift $ gets (fromMaybe newGameState . preview csl)
+  ntp       <- lift $ gets nextToPlay
+  cb        <- lift $ gets currentBoard
+  let newBoard = M.insert pos ntp cb
+  record %= (:) (oldGState & board .~ newBoard)
+  record . _head . toPlay %= swapPlayer
+
+revokeRecord :: State Game ()
+revokeRecord = do
+  restRecord <- use record
+  record .= tail restRecord
+
+revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
+revertWhenIllegalKo o = do
+  illegalKo <- lift $ gets isIllegalKo
+  if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
+
 csl :: Traversal' Game GameState
 csl = record . _head
 
@@ -65,18 +133,6 @@ swapPlayer White = Black
 getPosition :: Position -> Game -> Space
 getPosition pos game = M.findWithDefault Empty pos (currentBoard game)
 
--- setPosition creates a new GameState from the previous gameState
--- with the new stone added. 
-setPosition :: Position -> ExceptGame ()
-setPosition pos = do
-  checkBounds pos
-  checkOccupied pos
-  oldGState <- lift $ gets (fromMaybe newGameState . preview csl)
-  ntp       <- lift $ gets nextToPlay
-  cb        <- lift $ gets currentBoard
-  let newBoard = M.insert pos ntp cb
-  record %= (:) (oldGState & board .~ newBoard)
-  record . _head . toPlay %= swapPlayer
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
@@ -114,8 +170,8 @@ isOccupied pos = do
 
 isIllegalKo :: Game -> Bool
 isIllegalKo game = case view record game of
-  k : _ : k' : _ -> k ^. board == k' ^. board
-  _              -> False
+  gs : _ : gs' : _ -> gs ^. board == gs' ^. board
+  _                -> False
 
 
 adjMatchingPos :: Space -> Position -> Game -> S.Set Position
@@ -152,58 +208,3 @@ posToGroup pos game =
       newGroup  = Group liberties (S.singleton pos) player
   in  enumGroup newGroup game
 
-revokeRecord :: State Game ()
-revokeRecord = do
-  restRecord <- use record
-  record .= tail restRecord
-
-revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
-revertWhenIllegalKo o = do
-  illegalKo <- lift $ gets isIllegalKo
-  if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
-
--- Given a group, remove all members of that group 
--- credit the opposing player with captures
-captureGroup :: Group -> ExceptGame ()
-captureGroup deadGroup = do
-  record . _head . board %= M.filterWithKey
-    (\pos _ -> not $ S.member pos (deadGroup ^. members))
-  record . _head . captures . ix ((swapPlayer . _player) deadGroup) += S.size
-    (deadGroup ^. members)
-
--- Given surrounding groups, resolve stone captures + suicide
-resolveCapture :: Space -> [Group] -> ExceptGame Outcome
-resolveCapture sp groups
-  | null zeroLibGroups
-  = pure NoKill
-  | (sp == Black && not (null blackZLGroups) && null whiteZLGroups)
-    || (sp == White && not (null whiteZLGroups) && null blackZLGroups)
-  = lift revokeRecord >> throwE Suicide
-  | sp == Black
-  = mapM_ captureGroup whiteZLGroups >> pure Kill
-  | sp == White
-  = mapM_ captureGroup blackZLGroups >> pure Kill
-  | otherwise
-  = throwE IllegalPlayer
- where
-  zeroLibGroups = filter ((==) 0 . S.size . _liberties) groups
-  blackZLGroups = filter ((==) Black . _player) zeroLibGroups
-  whiteZLGroups = filter ((==) White . _player) zeroLibGroups
-
-
--- Place a stone, updating the game record if the move is valid.
--- Returns an Outcome indicating if the move resulted in a kill
--- Throws a MoveError exception if the move was invalid
-placeStone :: Position -> ExceptGame Outcome
-placeStone pos = do
-  setPosition pos
-  bNeighbors <- lift (gets $ adjMatchingPos White pos)
-  wNeighbors <- lift (gets $ adjMatchingPos Black pos)
-  adjGroups  <- lift
-    (gets $ \game ->
-      map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
-    )
-  curGroup <- lift (gets $ posToGroup pos)
-  player   <- lift (gets $ getPosition pos)
-  outcome  <- resolveCapture player (curGroup : adjGroups)
-  revertWhenIllegalKo outcome

@@ -20,7 +20,7 @@ executable bg
                       ,bg
 
 library
-  exposed-modules: Board
+  exposed-modules: Game, Logic
   build-depends:       base >= 4.7 && < 5
                       ,containers
                       ,mtl

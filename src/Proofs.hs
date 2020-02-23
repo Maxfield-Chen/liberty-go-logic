@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,8 +21,8 @@ import           Data.The
 import           Data.Refined
 import           Data.Coerce
 import           Logic.Implicit
-import           Board
 import           Control.Lens
+import           Game
 
 -- Predicates about the possible shapes of positions
 data HasState game

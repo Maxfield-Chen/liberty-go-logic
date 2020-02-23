@@ -146,7 +146,6 @@ swapPlayer White = Black
 getPosition :: Position -> Game -> Space
 getPosition pos game = M.findWithDefault Empty pos (currentBoard game)
 
-
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
 getNeighbors :: Position -> Game -> [Position]

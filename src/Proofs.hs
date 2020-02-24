@@ -1,15 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE ViewPatterns     #-}
-{-# LANGUAGE RankNTypes     #-}
-{-# LANGUAGE ExistentialQuantification     #-}
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE RoleAnnotations     #-}
-
 module Proofs where
 
 import           Prelude
@@ -24,7 +12,8 @@ import           Logic.Implicit
 import           Control.Lens
 import           Game
 
--- Predicates about the possible shapes of positions
+--TODO: Delete this code after integrating proofs into the Game DS
+-- Predicates about the possible shapes of States
 data HasState game
 data NoState game
 

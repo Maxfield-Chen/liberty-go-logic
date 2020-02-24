@@ -8,6 +8,12 @@ import           Control.Monad.State
 import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
+import           Data.The
+import           Data.Refined
+import           Theory.Lists
+import           Theory.Named
+import           Logic.Implicit
+import           Logic.Proof
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
 
@@ -29,7 +35,7 @@ data Space = Black | White | Empty deriving (Show, Eq, Ord)
 type Board = M.Map Position Space
 
 data Game = Game { _boardSize :: Int
-                 , _record :: [GameState]} deriving (Show, Eq)
+                           , _record :: [GameState]} deriving (Show, Eq)
 
 data GameState = GameState { _board :: Board
                            , _toPlay :: Space
@@ -48,4 +54,3 @@ type ExceptGame a = ExceptT MoveError (State Game) a
 standardBoardSize = 19
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game standardBoardSize [newGameState]
-

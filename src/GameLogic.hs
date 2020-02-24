@@ -1,4 +1,4 @@
-module Logic where
+module GameLogic where
 
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
@@ -6,6 +6,11 @@ import           Control.Monad.State
 import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
+import           Theory.Lists            hiding ( tail )
+import           Theory.Named
+import           Logic.Implicit
+import           Data.Refined
+import           Data.Coerce
 import           Game
 
 printBoard :: Game -> IO ()

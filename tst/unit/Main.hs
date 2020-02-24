@@ -1,7 +1,5 @@
 module Main where
 
-import           Game
-import           Logic
 import           Test.HUnit
 import           TestBoard
 

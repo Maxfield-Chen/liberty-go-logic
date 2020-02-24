@@ -20,7 +20,19 @@ executable bg
                       ,bg
 
 library
-  exposed-modules: Game, Logic
+  exposed-modules: Game, GameLogic
+  extensions: LambdaCase
+            , TypeOperators
+            , ScopedTypeVariables
+            , FlexibleInstances
+            , FlexibleContexts
+            , MultiParamTypeClasses
+            , PatternSynonyms    
+            , ViewPatterns    
+            , RankNTypes    
+            , ExistentialQuantification    
+            , GADTs    
+            , RoleAnnotations    
   build-depends:       base >= 4.7 && < 5
                       ,containers
                       ,mtl

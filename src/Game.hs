@@ -35,7 +35,7 @@ data Space = Black | White | Empty deriving (Show, Eq, Ord)
 type Board = M.Map Position Space
 
 data Game = Game { _boardSize :: Int
-                           , _record :: [GameState]} deriving (Show, Eq)
+                 , _record :: [GameState]} deriving (Show, Eq)
 
 data GameState = GameState { _board :: Board
                            , _toPlay :: Space
@@ -54,3 +54,6 @@ type ExceptGame a = ExceptT MoveError (State Game) a
 standardBoardSize = 19
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game standardBoardSize [newGameState]
+
+bounded :: (Num n, Ord n) => n -> Pair n -> Bool
+bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs

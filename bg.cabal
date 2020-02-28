@@ -20,7 +20,7 @@ executable bg
                       ,bg
 
 library
-  exposed-modules: Game, GameLogic
+  exposed-modules: Game, GameLogic, Proofs
   extensions: LambdaCase
             , TypeOperators
             , ScopedTypeVariables
@@ -43,6 +43,18 @@ library
   default-language:    Haskell2010
 
 test-suite unit-tests
+  extensions: LambdaCase
+            , TypeOperators
+            , ScopedTypeVariables
+            , FlexibleInstances
+            , FlexibleContexts
+            , MultiParamTypeClasses
+            , PatternSynonyms    
+            , ViewPatterns    
+            , RankNTypes    
+            , ExistentialQuantification    
+            , GADTs    
+            , RoleAnnotations    
   main-is:       Main.hs
   hs-source-dirs: tst/unit
   type:          exitcode-stdio-1.0
@@ -53,4 +65,5 @@ test-suite unit-tests
                 ,mtl
                 ,lens
                 ,transformers
+                ,gdp
                 ,bg

@@ -2,6 +2,7 @@ module TestBoard where
 
 import           Game
 import           GameLogic
+import           Proofs
 import           Test.HUnit
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
@@ -10,7 +11,7 @@ import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
 import           Data.Sort
-
+import           Theory.Named
 
 inProgressBoard = M.fromList [(Pair 0 0, Black)]
 suicideBoard = M.fromList
@@ -35,16 +36,16 @@ k3Board = M.insert (Pair 2 1) White (M.delete (Pair 3 1) k2Board)
 k1GS = GameState k1Board Black (M.fromList [(Black, 0), (White, 0)])
 k2GS = GameState k2Board White (M.fromList [(Black, 1), (White, 0)])
 k3GS = GameState k3Board Black (M.fromList [(Black, 1), (White, 1)])
-k1Game = Game 19 [k1GS]
-k2Game = Game 19 [k2GS, k1GS]
-k3Game = Game 19 [k3GS, k2GS, k1GS]
+k1Game = Game standardBoardSize [k1GS]
+k2Game = Game standardBoardSize [k2GS, k1GS]
+k3Game = Game standardBoardSize [k3GS, k2GS, k1GS]
 suicideGS = GameState suicideBoard Black (M.fromList [(Black, 0), (White, 0)])
 inProgressGS =
   GameState inProgressBoard White (M.fromList [(Black, 0), (White, 0)])
-inProgressGame = Game 19 [inProgressGS, newGameState]
+inProgressGame = Game standardBoardSize [inProgressGS, newGameState]
 groupGS = GameState groupBoard White (M.fromList [(Black, 0), (White, 0)])
-groupGame = Game 19 [groupGS]
-suicideGame = Game 19 [suicideGS]
+groupGame = Game standardBoardSize [groupGS]
+suicideGame = Game standardBoardSize [suicideGS]
 
 testCurrentBoard = TestCase
   (assertEqual "for currentBoard with begun game,"
@@ -228,19 +229,30 @@ testPlaceStoneValidNoKill = TestCase
       , _toPlay = Black
       }
     )
-    (runState (runExceptT (placeStone (Pair 5 5))) inProgressGame)
+    (name (Pair 5 5) $ \case
+      Bound pos -> runState (runExceptT (placeStone pos)) inProgressGame
+      Unbound   -> (Left OutOfBounds, newGame)
+    )
   )
 
 testPlaceStoneValidKill = TestCase
-  (assertEqual "for placeStone when Valid with a kill"
-               (Right Kill, k2Game)
-               (runState (runExceptT (placeStone (Pair 3 1))) k1Game)
+  (assertEqual
+    "for placeStone when Valid with a kill"
+    (Right Kill, k2Game)
+    (name (Pair 3 1) $ \case
+      Bound pos -> runState (runExceptT (placeStone pos)) k1Game
+      Unbound   -> (Left OutOfBounds, newGame)
+    )
   )
 
 testPlaceStoneValidSuicide = TestCase
-  (assertEqual "for placeStone when Valid with a Suicide"
-               (Left Suicide, suicideGame)
-               (runState (runExceptT (placeStone (Pair 3 1))) suicideGame)
+  (assertEqual
+    "for placeStone when Valid with a Suicide"
+    (Left Suicide, suicideGame)
+    (name (Pair 3 1) $ \case
+      Bound pos -> runState (runExceptT (placeStone pos)) suicideGame
+      Unbound   -> (Left OutOfBounds, newGame)
+    )
   )
 
 setters = TestList

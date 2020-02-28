@@ -6,12 +6,13 @@ import           Control.Monad.State
 import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
-import           Theory.Lists            hiding ( tail )
 import           Theory.Named
 import           Logic.Implicit
 import           Data.Refined
 import           Data.Coerce
+import           Data.The
 import           Game
+import           Proofs
 
 printBoard :: Game -> IO ()
 printBoard game = do
@@ -25,8 +26,9 @@ printBoard game = do
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
-placeStone :: Position -> ExceptGame Outcome
-placeStone pos = do
+placeStone :: Fact (IsBound pos) => (Position ~~ pos) -> ExceptGame Outcome
+placeStone namedPos = do
+  let pos = the namedPos
   setPosition pos
   groups  <- lift $ gets (surroundingGroups pos)
   player  <- lift $ gets (getPosition pos)
@@ -75,7 +77,6 @@ resolveCapture sp groups
 -- with the new stone added. 
 setPosition :: Position -> ExceptGame ()
 setPosition pos = do
-  checkBounds pos
   checkOccupied pos
   oldGState <- lift $ gets (fromMaybe newGameState . preview csl)
   ntp       <- lift $ gets nextToPlay
@@ -108,40 +109,27 @@ swapPlayer :: Space -> Space
 swapPlayer Black = White
 swapPlayer White = Black
 
+-- TODO: Convert this to a gdp value
 getPosition :: Position -> Game -> Space
 getPosition pos game = M.findWithDefault Empty pos (currentBoard game)
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
+-- TODO: Convert this to a gdp value
 getNeighbors :: Position -> Game -> [Position]
 getNeighbors pos game =
   let neighbors = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
   in  filter (bounded (view boardSize game)) neighbors
 
--- TODO: Having 3 functions do the same thing is atrocious. Look to migrate away from state
--- and exceptT as much as possible.
--- TODO: Replace ExceptT with GDP style validation
-checkBounds :: Position -> ExceptGame ()
-checkBounds pos = do
-  oob <- lift (isWithinBounds pos)
-  if oob then pure () else throwE OutOfBounds
-
-isWithinBounds :: Position -> State Game Bool
-isWithinBounds pos = do
-  bs <- use boardSize
-  pure $ bounded bs pos
-
-bounded :: Int -> Position -> Bool
-bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs
-
+-- TODO: Convert this to a gdp value
 checkOccupied :: Position -> ExceptGame ()
 checkOccupied pos = do
   o <- isOccupied pos
   if o then throwE Occupied else pure ()
 
+-- TODO: Convert this to a GDP value
 isOccupied :: Position -> ExceptGame Bool
 isOccupied pos = do
-  checkBounds pos
   space <- lift (gets (getPosition pos))
   pure (space /= Empty)
 
@@ -150,7 +138,7 @@ isIllegalKo game = case view record game of
   gs : _ : gs' : _ -> gs ^. board == gs' ^. board
   _                -> False
 
-
+-- TODO: Convert this to a GDP value
 adjMatchingPos :: Space -> Position -> Game -> S.Set Position
 adjMatchingPos sp pos game =
   let neighbors = getNeighbors pos game
@@ -177,6 +165,7 @@ enumGroup group game =
       newGroup     = group { _members = newMembers, _liberties = newLiberties }
   in  if newGroup == group then newGroup else enumGroup newGroup game
 
+-- TODO: Convert to a GDP value
 -- Given a position, build the group associated with that position
 posToGroup :: Position -> Game -> Group
 posToGroup pos game =

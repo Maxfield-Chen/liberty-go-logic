@@ -287,7 +287,7 @@ setters = TestList
 
 
 getters = TestList
-  [ TestLabel "GetcurrentBoard"        testCurrentBoard
+  [ TestLabel "GetCurrentBoard"        testCurrentBoard
   , TestLabel "GetNextToPlay"          testNextToPlay
   , TestLabel "GetPositionOccupied"    testGetPositionOccupied
   , TestLabel "GetPositionEmpty"       testGetPositionEmpty

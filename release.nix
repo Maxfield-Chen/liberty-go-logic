@@ -1,3 +1,4 @@
+# Figure out how to include miso's ghcjs set as a dependency with my overrides while using cachix
 let 
   config = {
     packageOverrides = pkgs: rec {
@@ -7,6 +8,8 @@ let
           haskellPackagesNew.callPackage ./bg.nix { };
         gdp = 
           haskellPackagesNew.callPackage ./gdp.nix { };
+        miso = 
+          haskellPackagesNew.callPackage ./miso.nix { };
           };
         };
       };

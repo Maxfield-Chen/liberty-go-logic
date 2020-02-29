@@ -1,13 +1,11 @@
 name:                bg
 version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/githubuser/bg#readme
+homepage:            https://github.com/Maxfield-Chen/liberty-go-server
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2020 Author name here
+author:              Maxfield Chen
+maintainer:          maxfieldchen@gmail.com
+copyright:           2020 Maxfield Chen
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
@@ -18,7 +16,7 @@ executable bg
   main-is:             Main.hs
   build-depends:       base >= 4.7 && < 5
                       ,bg
-                      ,gdp
+                      ,miso
 
 library
   exposed-modules: Game, GameLogic, Proofs
@@ -39,7 +37,7 @@ library
                       ,mtl
                       ,lens
                       ,transformers
-                      ,gdp
+                      ,gdp == 0.0.3.0 
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -66,5 +64,5 @@ test-suite unit-tests
                 ,mtl
                 ,lens
                 ,transformers
-                ,gdp
+                ,gdp == 0.0.3.0
                 ,bg

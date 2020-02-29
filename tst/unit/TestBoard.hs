@@ -60,23 +60,23 @@ testNextToPlay = TestCase
   )
 
 testGetPositionOccupied = TestCase
-  (assertEqual "for getPosition with valid occupied space,"
-               Black
-               (getPosition (Pair 0 0) inProgressGame)
+  (assertEqual
+    "for getPosition with valid occupied space,"
+    Black
+    (name (Pair 0 0) $ \case
+      Bound pos -> getPosition pos inProgressGame
+    )
   )
 
 testGetPositionEmpty = TestCase
-  (assertEqual "for getPosition with valid unoccupied space,"
-               Empty
-               (getPosition (Pair 0 1) inProgressGame)
+  (assertEqual
+    "for getPosition with valid unoccupied space,"
+    Empty
+    (name (Pair 0 1) $ \case
+      Bound pos -> getPosition pos inProgressGame
+    )
   )
 
---testGetPositionOOB = TestCase
-  --(assertEqual
-    --"for getPosition with an OOB space,"
-    --(Left OutOfBounds)
-    --(evalState (runExceptT (getPosition (Pair 19 19))) inProgressGame)
-  --)
 
 testGetNeighborsFour =
   let pos = Pair 5 5
@@ -84,76 +84,92 @@ testGetNeighborsFour =
           (\p -> (+) <$> pos <*> p)
             <$> [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
   in  TestCase
-        (assertEqual "for getPosition with 4 spaces,"
-                     (sort n)
-                     (sort $ getNeighbors pos inProgressGame)
+        (assertEqual
+          "for getPosition with 4 spaces,"
+          (sort n)
+          (sort $ name pos $ \case
+            Bound pos -> getNeighbors pos inProgressGame
+          )
         )
 
 testGetNeighborsThree =
   let pos = Pair 0 5
       n   = [(Pair 1 5), (Pair 0 4), (Pair 0 6)]
   in  TestCase
-        (assertEqual "for getPosition with 3 spaces,"
-                     (sort n)
-                     (sort $ getNeighbors pos inProgressGame)
+        (assertEqual
+          "for getPosition with 3 spaces,"
+          (sort n)
+          (sort $ name pos $ \case
+            Bound pos -> getNeighbors pos inProgressGame
+          )
         )
 
 testGetNeighborsTwo =
   let pos = Pair 0 0
       n   = [(Pair 0 1), (Pair 1 0)]
   in  TestCase
-        (assertEqual "for getPosition with 2 spaces,"
-                     (sort n)
-                     (sort $ getNeighbors pos inProgressGame)
+        (assertEqual
+          "for getPosition with 2 spaces,"
+          (sort n)
+          (sort $ name pos $ \case
+            Bound pos -> getNeighbors pos inProgressGame
+          )
         )
 
 testisOccupiedBlack =
   let pos = Pair 0 0
   in  TestCase
-        (assertEqual "for isOccupied when occupied"
-                     (Right True)
-                     (evalState (runExceptT (isOccupied pos)) inProgressGame)
+        (assertEqual
+          "for isOccupied when occupied"
+          True
+          (name pos $ \case
+            Bound pos -> evalState (isOccupied pos) inProgressGame
+          )
         )
 
 testisOccupiedEmpty =
   let pos = Pair 10 10
   in  TestCase
-        (assertEqual "for isOccupied when empty"
-                     (Right False)
-                     (evalState (runExceptT (isOccupied pos)) inProgressGame)
-        )
-
-testisOccupiedOOB =
-  let pos = Pair 19 19
-  in  TestCase
-        (assertEqual "for isOccupied when OOB"
-                     (Left OutOfBounds)
-                     (evalState (runExceptT (isOccupied pos)) inProgressGame)
+        (assertEqual
+          "for isOccupied when empty"
+          False
+          (name pos $ \case
+            Bound pos -> evalState (isOccupied pos) inProgressGame
+          )
         )
 
 testAdjacentGroupNone =
   let pos = Pair 2 1
   in  TestCase
-        (assertEqual "for testAdjacentMatching when none match"
-                     S.empty
-                     (adjMatchingPos White pos k1Game)
+        (assertEqual
+          "for testAdjacentMatching when none match"
+          S.empty
+          (name pos $ \case
+            Bound pos -> adjMatchingPos White pos k1Game
+          )
         )
 
 testAdjacentGroupThree =
   let pos = Pair 2 1
   in  TestCase
-        (assertEqual "for testAdjacentMatching when three match"
-                     (S.fromList [Pair 2 0, Pair 1 1, Pair 2 2])
-                     (adjMatchingPos Black pos k1Game)
+        (assertEqual
+          "for testAdjacentMatching when three match"
+          (S.fromList [Pair 2 0, Pair 1 1, Pair 2 2])
+          (name pos $ \case
+            Bound pos -> adjMatchingPos Black pos k1Game
+          )
         )
 
 testPosToGroupOne =
   let pos   = Pair 0 0
       group = Group (S.fromList [Pair 0 1, Pair 1 0]) (S.singleton pos) Black
   in  TestCase
-        (assertEqual "for posToGroup when singleton,"
-                     group
-                     (posToGroup pos inProgressGame)
+        (assertEqual
+          "for posToGroup when singleton,"
+          group
+          (name pos $ \case
+            Bound pos -> posToGroup pos inProgressGame
+          )
         )
 
 testPosToGroupThree =
@@ -162,9 +178,12 @@ testPosToGroupThree =
                     (S.fromList [Pair 0 0, Pair 0 1, Pair 0 2])
                     Black
   in  TestCase
-        (assertEqual "for posToGroup when three group,"
-                     group
-                     (posToGroup pos groupGame)
+        (assertEqual
+          "for posToGroup when three group,"
+          group
+          (name pos $ \case
+            Bound pos -> posToGroup pos groupGame
+          )
         )
 
 testPosToGroupSingletonBordering =
@@ -173,9 +192,12 @@ testPosToGroupSingletonBordering =
                     (S.fromList [Pair 3 2])
                     White
   in  TestCase
-        (assertEqual "for posToGroup when bordering singleton group,"
-                     group
-                     (posToGroup pos k1Game)
+        (assertEqual
+          "for posToGroup when bordering singleton group,"
+          group
+          (name pos $ \case
+            Bound pos -> posToGroup pos k1Game
+          )
         )
 
 testSetPositionValid =
@@ -189,23 +211,21 @@ testSetPositionValid =
             , _toPlay = Black
             }
           )
-          (runState (runExceptT (setPosition pos)) inProgressGame)
+          (name pos $ \case
+            Bound pos -> runState (runExceptT (setPosition pos)) inProgressGame
+          )
         )
 
-testSetPositionOOB =
-  let pos = Pair 19 19
-  in  TestCase
-        (assertEqual "for setPosition when OOB"
-                     (Left OutOfBounds, inProgressGame)
-                     (runState (runExceptT (setPosition pos)) inProgressGame)
-        )
 
 testSetPositionOccupied =
   let pos = Pair 0 0
   in  TestCase
-        (assertEqual "for setPosition when occupied"
-                     (Left Occupied, inProgressGame)
-                     (runState (runExceptT (setPosition pos)) inProgressGame)
+        (assertEqual
+          "for setPosition when occupied"
+          (Left Occupied, inProgressGame)
+          (name pos $ \case
+            Bound pos -> runState (runExceptT (setPosition pos)) inProgressGame
+          )
         )
 
 testRevertWhenIllegalKo = TestCase
@@ -257,7 +277,6 @@ testPlaceStoneValidSuicide = TestCase
 
 setters = TestList
   [ TestLabel "SetPositionValid"           testSetPositionValid
-  , TestLabel "SetPositionOOB"             testSetPositionOOB
   , TestLabel "SetPositionOccupied"        testSetPositionOccupied
   , TestLabel "testRevertWhenIllegalKo"    testRevertWhenIllegalKo
   , TestLabel "testRevertWhenIllegalNoKo"  testRevertWhenIllegalNoKo
@@ -272,12 +291,10 @@ getters = TestList
   , TestLabel "GetNextToPlay"          testNextToPlay
   , TestLabel "GetPositionOccupied"    testGetPositionOccupied
   , TestLabel "GetPositionEmpty"       testGetPositionEmpty
-  , TestLabel "GetPositionOOB"         testSetPositionOOB
   , TestLabel "GetNeighborsFour"       testGetNeighborsFour
   , TestLabel "GetNeighborsThree"      testGetNeighborsThree
   , TestLabel "GetNeighborsTwo"        testGetNeighborsTwo
   , TestLabel "testisOccupiedBlack"    testisOccupiedBlack
-  , TestLabel "testisOccupiedOOB"      testisOccupiedOOB
   , TestLabel "testisOccupiedEmpty"    testisOccupiedEmpty
   , TestLabel "testAdjacentGroupNone"  testAdjacentGroupNone
   , TestLabel "testAdjacentGroupThree" testAdjacentGroupThree

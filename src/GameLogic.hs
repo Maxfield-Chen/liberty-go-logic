@@ -19,7 +19,13 @@ printBoard game = do
   let boardPositions = [ [ Pair x y | x <- [0 .. 18] ] | y <- [0 .. 18] ]
   mapM_
     (\row ->
-      putStrLn "" >> mapM_ (putStr . (++ " ") . show . (`getPosition` game)) row
+      putStrLn ""
+        >> mapM_
+             (\pos -> name pos $ \case
+               Bound pos -> (putStr (show (pos `getPosition` game) ++ " "))
+               Unbound   -> error "Invalid position in printBoard."
+             )
+             row
     )
     boardPositions
 
@@ -27,20 +33,23 @@ printBoard game = do
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
 placeStone :: Fact (IsBound pos) => (Position ~~ pos) -> ExceptGame Outcome
-placeStone namedPos = do
-  let pos = the namedPos
+placeStone pos = do
   setPosition pos
   groups  <- lift $ gets (surroundingGroups pos)
   player  <- lift $ gets (getPosition pos)
   outcome <- resolveCapture player groups
   revertWhenIllegalKo outcome
 
-surroundingGroups :: Position -> Game -> [Group]
+surroundingGroups :: Fact (IsBound pos) => (Position ~~ pos) -> Game -> [Group]
 surroundingGroups pos game =
   let bNeighbors = adjMatchingPos White pos game
       wNeighbors = adjMatchingPos Black pos game
-      adjGroups =
-          map (`posToGroup` game) (S.toList (bNeighbors `S.union` wNeighbors))
+      adjGroups  = map
+        (\pos -> name pos $ \case
+          Bound pos -> (posToGroup pos game)
+          Unbound   -> error "Invalid position in surroundingGroups"
+        )
+        (S.toList (bNeighbors `S.union` wNeighbors))
       curGroup = posToGroup pos game
       player   = nextToPlay game
   in  curGroup : adjGroups
@@ -75,13 +84,13 @@ resolveCapture sp groups
 
 -- setPosition creates a new GameState from the previous gameState
 -- with the new stone added. 
-setPosition :: Position -> ExceptGame ()
+setPosition :: Fact (IsBound pos) => Position ~~ pos -> ExceptGame ()
 setPosition pos = do
   checkOccupied pos
   oldGState <- lift $ gets (fromMaybe newGameState . preview csl)
   ntp       <- lift $ gets nextToPlay
   cb        <- lift $ gets currentBoard
-  let newBoard = M.insert pos ntp cb
+  let newBoard = M.insert (the pos) ntp cb
   record %= (:) (oldGState & board .~ newBoard)
   record . _head . toPlay %= swapPlayer
 
@@ -109,28 +118,24 @@ swapPlayer :: Space -> Space
 swapPlayer Black = White
 swapPlayer White = Black
 
--- TODO: Convert this to a gdp value
-getPosition :: Position -> Game -> Space
-getPosition pos game = M.findWithDefault Empty pos (currentBoard game)
+getPosition :: Fact (IsBound pos) => Position ~~ pos -> Game -> Space
+getPosition pos game = M.findWithDefault Empty (the pos) (currentBoard game)
 
 neighborDeltas = [(Pair 0 1), (Pair 0 (-1)), (Pair 1 0), (Pair (-1) 0)]
 
--- TODO: Convert this to a gdp value
-getNeighbors :: Position -> Game -> [Position]
+getNeighbors :: Fact (IsBound pos) => Position ~~ pos -> Game -> [Position]
 getNeighbors pos game =
-  let neighbors = (\p -> (+) <$> pos <*> p) <$> neighborDeltas
+  let neighbors = (\delta -> (+) <$> the pos <*> delta) <$> neighborDeltas
   in  filter (bounded (view boardSize game)) neighbors
 
--- TODO: Convert this to a gdp value
-checkOccupied :: Position -> ExceptGame ()
+checkOccupied :: Fact (IsBound pos) => Position ~~ pos -> ExceptGame ()
 checkOccupied pos = do
-  o <- isOccupied pos
+  o <- lift $ isOccupied pos
   if o then throwE Occupied else pure ()
 
--- TODO: Convert this to a GDP value
-isOccupied :: Position -> ExceptGame Bool
+isOccupied :: Fact (IsBound pos) => Position ~~ pos -> State Game Bool
 isOccupied pos = do
-  space <- lift (gets (getPosition pos))
+  space <- gets (getPosition pos)
   pure (space /= Empty)
 
 isIllegalKo :: Game -> Bool
@@ -138,14 +143,16 @@ isIllegalKo game = case view record game of
   gs : _ : gs' : _ -> gs ^. board == gs' ^. board
   _                -> False
 
--- TODO: Convert this to a GDP value
-adjMatchingPos :: Space -> Position -> Game -> S.Set Position
+adjMatchingPos
+  :: Fact (IsBound pos) => Space -> Position ~~ pos -> Game -> S.Set Position
 adjMatchingPos sp pos game =
   let neighbors = getNeighbors pos game
   in  foldl
-        (\ret neighborPos -> if getPosition neighborPos game == sp
-          then S.insert neighborPos ret
-          else ret
+        (\ret neighborPos -> name neighborPos $ \case
+          Bound neighborPos -> if getPosition neighborPos game == sp
+            then S.insert (the neighborPos) ret
+            else ret
+          Unbound -> error "Invalid NeighborPosition in adjMatchingPos"
         )
         S.empty
         neighbors
@@ -153,24 +160,25 @@ adjMatchingPos sp pos game =
 -- Enum a group by adding all neighbors of members + their liberties
 -- Base Case: return if new group == old group
 -- Find all neighbors, add same player unseen to members
+-- See if findSpaceOf is a candidate for GDP value. The folding classification may be tricky.
 enumGroup :: Group -> Game -> Group
 enumGroup group game =
-  let findSpaceOf sp game =
-          foldl (\ret s -> adjMatchingPos sp s game `S.union` ret)
-      newMembers = findSpaceOf (group ^. player)
-                               game
-                               (group ^. members)
-                               (group ^. members)
+  let findSpaceOf sp game = foldl
+        (\ret pos -> name pos $ \case
+          Bound pos -> adjMatchingPos sp pos game `S.union` ret
+          Unbound   -> error "Invalid Position in enumGroup"
+        )
+      newMembers =
+          findSpaceOf (group ^. player) game (group ^. members) (group ^. members)
       newLiberties = findSpaceOf Empty game (group ^. liberties) newMembers
       newGroup     = group { _members = newMembers, _liberties = newLiberties }
   in  if newGroup == group then newGroup else enumGroup newGroup game
 
--- TODO: Convert to a GDP value
 -- Given a position, build the group associated with that position
-posToGroup :: Position -> Game -> Group
+posToGroup :: Fact (IsBound pos) => Position ~~ pos -> Game -> Group
 posToGroup pos game =
   let player    = getPosition pos game
       liberties = adjMatchingPos Empty pos game
-      newGroup  = Group liberties (S.singleton pos) player
+      newGroup  = Group liberties (S.singleton (the pos)) player
   in  enumGroup newGroup game
 

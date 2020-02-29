@@ -38,6 +38,3 @@ classifyBound val
 
 printBounded :: Fact (IsBound pos) => Position ~~ pos -> IO ()
 printBounded pos = print (the pos)
-
-test5 = name (Pair 5 5) $ \case
-  Bound pos -> printBounded pos

@@ -1,1 +1,1 @@
-(import ./release.nix).bg.env
+(import ./release.nix).lgl.env

@@ -1,16 +1,20 @@
-with (import (builtins.fetchTarball {
-  url = "https://github.com/dmjio/miso/archive/1.4.tar.gz";
-  sha256 = "1wl9vpqxshzrlanm9rpvgkiay3xa1abvkyknnp5z41kgfw63ypdl";
-}) {});
+let
+  config = {
+    packageOverrides = pkgs: rec {
+      haskellPackages = pkgs.haskellPackages.override {
+        overrides = haskellPackagesNew: haskellPackagesOld: rec {
+          lgl =
+            haskellPackagesNew.callPackage ./lgl.nix { };
 
-let 
- overrides = self: super: {
-        bg = 
-          self.callPackage ./bg.nix { };
-        gdp = 
-          self.callPackage ./nix/gdp.nix { };
-          };
- newPkgs = pkgs.haskellPackages.override { inherit overrides; };
+          gdp =
+            haskellPackagesNew.callPackage ./nix/gdp.nix { };
+        };
+      };
+    };
+  };
+
+  pkgs = import <nixpkgs> { inherit config; };
+
 in
-  { bg = newPkgs.bg;
+  { lgl = pkgs.haskellPackages.lgl;
   }

@@ -1,15 +1,10 @@
 module Proofs where
 
 import           Prelude
-import           Theory.Lists
 import           Theory.Named
-import           Theory.Equality
 import           Logic.Proof
 import           Data.The
-import           Data.Refined
-import           Data.Coerce
 import           Logic.Implicit
-import           Control.Lens
 import           Game
 
 
@@ -35,6 +30,3 @@ classifyBound :: forall n val . (Num n, Ord n) =>  (Pair n ~~ val) -> BoundedCas
 classifyBound val
   | bounded 19 (the val) = note (axiom :: Proof (IsBound val)) (Bound_ val)
   | otherwise            = note (axiom :: Proof (IsUnbound val)) Unbound_
-
-printBounded :: Fact (IsBound pos) => Position ~~ pos -> IO ()
-printBounded pos = print (the pos)

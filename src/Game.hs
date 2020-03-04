@@ -5,15 +5,8 @@ module Game where
 import qualified Data.Map                      as M
 import qualified Data.Set                      as S
 import           Control.Monad.State
-import           Data.Maybe
 import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
-import           Data.The
-import           Data.Refined
-import           Theory.Lists
-import           Theory.Named
-import           Logic.Implicit
-import           Logic.Proof
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
 

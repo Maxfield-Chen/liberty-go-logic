@@ -8,8 +8,6 @@ import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
 import           Theory.Named
 import           Logic.Implicit
-import           Data.Refined
-import           Data.Coerce
 import           Data.The
 import           Game
 import           Proofs
@@ -22,8 +20,8 @@ printBoard game = do
       putStrLn ""
         >> mapM_
              (\pos -> name pos $ \case
-               Bound pos -> (putStr (show (pos `getPosition` game) ++ " "))
-               Unbound   -> error "Invalid position in printBoard."
+               Bound boundPos -> (putStr (show (boundPos `getPosition` game) ++ " "))
+               _   -> error "Invalid position in printBoard."
              )
              row
     )

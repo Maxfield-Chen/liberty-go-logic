@@ -1,7 +1,9 @@
-# Liberty Go Server (LGS)
+# Liberty Go Logic (LGL)
 
-A Haskell web based client-server implementation of the board game Baduk. Uses the Ghosts of Departed Proofs technique to prove that moves are valid before being placed. 
+A Haskell implementation of the board game Baduk. Uses a simple ExceptT + StateT monad transformer stack and relies on the Ghosts of Departed Proofs technique to prove that moves are valid before being placed. 
 
-Relies on *Miso* and *Servant* to generate the web bits.
+This library only deals with the game logic and does not provide any sort of interface aside from the raw functions.
+
+This library is designed to be used in combination with Liberty Go Server which handles the client / server / docs generation. 
 
 Made with love by Maxfield Chen (dryc)

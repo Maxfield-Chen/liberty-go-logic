@@ -102,7 +102,6 @@ revertWhenIllegalKo o = do
   illegalKo <- lift $ gets isIllegalKo
   if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
 
---csl :: Fact (State val) => Lens (Game ~~ val) GameState
 csl :: Traversal' Game GameState
 csl = record . _head
 

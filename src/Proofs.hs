@@ -1,11 +1,11 @@
 module Proofs where
 
+import           Data.The
+import           Game
+import           Logic.Implicit
+import           Logic.Proof
 import           Prelude
 import           Theory.Named
-import           Logic.Proof
-import           Data.The
-import           Logic.Implicit
-import           Game
 
 
 -- Predicates about the possible shapes of positions

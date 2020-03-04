@@ -2,11 +2,11 @@
 
 module Game where
 
-import qualified Data.Map                      as M
-import qualified Data.Set                      as S
+import           Control.Lens               hiding (Empty)
 import           Control.Monad.State
-import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
+import qualified Data.Map                   as M
+import qualified Data.Set                   as S
 
 data Pair a = Pair a a deriving (Show, Eq, Ord)
 
@@ -28,15 +28,15 @@ data Space = Black | White | Empty deriving (Show, Eq, Ord)
 type Board = M.Map Position Space
 
 data Game = Game { _boardSize :: Int
-                 , _record :: [GameState]} deriving (Show, Eq)
+                 , _record    :: [GameState]} deriving (Show, Eq)
 
-data GameState = GameState { _board :: Board
-                           , _toPlay :: Space
+data GameState = GameState { _board    :: Board
+                           , _toPlay   :: Space
                            , _captures :: M.Map Space Int} deriving (Show, Eq)
 
 data Group = Group { _liberties :: S.Set Position
-                   , _members :: S.Set Position
-                   , _player :: Space} deriving (Show, Eq)
+                   , _members   :: S.Set Position
+                   , _player    :: Space} deriving (Show, Eq)
 
 makeLenses ''Game
 makeLenses ''GameState

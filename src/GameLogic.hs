@@ -1,16 +1,16 @@
 module GameLogic where
 
-import qualified Data.Map                      as M
-import qualified Data.Set                      as S
+import           Control.Lens               hiding (Empty)
 import           Control.Monad.State
-import           Data.Maybe
-import           Control.Lens            hiding ( Empty )
 import           Control.Monad.Trans.Except
-import           Theory.Named
-import           Logic.Implicit
+import qualified Data.Map                   as M
+import           Data.Maybe
+import qualified Data.Set                   as S
 import           Data.The
 import           Game
+import           Logic.Implicit
 import           Proofs
+import           Theory.Named
 
 printBoard :: Game -> IO ()
 printBoard game = do
@@ -52,7 +52,7 @@ surroundingGroups pos game =
       player   = nextToPlay game
   in  curGroup : adjGroups
 
--- Given a group, remove all members of that group 
+-- Given a group, remove all members of that group
 -- credit the opposing player with captures
 captureGroup :: Group -> ExceptGame ()
 captureGroup deadGroup = do
@@ -81,7 +81,7 @@ resolveCapture sp groups
   whiteZLGroups = filter ((==) White . _player) zeroLibGroups
 
 -- setPosition creates a new GameState from the previous gameState
--- with the new stone added. 
+-- with the new stone added.
 setPosition :: Fact (IsBound pos) => Position ~~ pos -> ExceptGame ()
 setPosition pos = do
   checkOccupied pos

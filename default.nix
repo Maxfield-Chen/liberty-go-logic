@@ -3,10 +3,6 @@ let
     packageOverrides = pkgs: rec {
       haskellPackages = pkgs.haskellPackages.override {
         overrides = haskellPackagesNew: haskellPackagesOld: rec {
-          lgl =
-            haskellPackagesNew.callPackage ./lgl.nix { };
-          ghc = haskellPackagesOld.ghc // {withPackages = haskellPackagesOld.ghc.withHoogle; };
-          ghcWithPackages = haskellPackagesNew.ghc.withPackages;
           gdp =
             haskellPackagesNew.callPackage ./nix/gdp.nix { };
         };
@@ -15,7 +11,14 @@ let
   };
 
   pkgs = import <nixpkgs> { inherit config; };
+  haskellPackages = pkgs.haskellPackages;
+  drv = haskellPackages.callCabal2nix "lgl" ./. { };
 
 in
-  { lgl = pkgs.haskellPackages.lgl;
+  { lgl = drv;
+    lgl-shell = haskellPackages.shellFor {
+      packages = p: [drv];
+      buildInputs = with pkgs; [cabal-install hlint ghcid stylish-haskell];
+      withHoogle = true;
+      };
   }

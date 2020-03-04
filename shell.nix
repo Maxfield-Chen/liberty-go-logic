@@ -1,1 +1,1 @@
-(import ./release.nix).lgl.env
+(import ./default.nix).lgl-shell

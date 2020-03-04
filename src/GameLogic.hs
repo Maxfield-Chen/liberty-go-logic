@@ -178,4 +178,3 @@ posToGroup pos game =
       liberties = adjMatchingPos Empty pos game
       newGroup  = Group liberties (S.singleton (the pos)) player
   in  enumGroup newGroup game
-

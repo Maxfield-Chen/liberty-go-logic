@@ -4,7 +4,7 @@
 mkDerivation {
   pname = "lgl";
   version = "0.1.0.0";
-  src = ./.;
+  src = /home/nihliphobe/projects/haskell/lgl;
   libraryHaskellDepends = [
     base containers gdp lens mtl transformers
   ];

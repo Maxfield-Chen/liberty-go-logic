@@ -1,1 +1,1 @@
-(import ./default.nix).lgl-shell
+import nix/shell.nix

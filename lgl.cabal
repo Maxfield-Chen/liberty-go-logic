@@ -26,6 +26,7 @@ library
             , GADTs    
             , RoleAnnotations    
   build-depends:       base >= 4.7 && < 5
+                      ,aeson
                       ,containers
                       ,mtl
                       ,lens
@@ -54,6 +55,7 @@ test-suite unit-tests
   type:          exitcode-stdio-1.0
   build-depends: base >= 4.7 && < 5
                 ,HUnit == 1.6.0.0
+                ,aeson
                 ,sort
                 ,containers
                 ,mtl

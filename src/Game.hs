@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Game where
 
@@ -7,8 +8,9 @@ import           Control.Monad.State
 import           Control.Monad.Trans.Except
 import qualified Data.Map                   as M
 import qualified Data.Set                   as S
+import GHC.Generics
 
-data Pair a = Pair a a deriving (Show, Eq, Ord)
+data Pair a = Pair a a deriving (Show, Eq, Ord, Generic)
 
 instance Functor Pair where
   fmap f (Pair x y) = Pair (f x) (f y)
@@ -19,24 +21,24 @@ instance Applicative Pair where
 
 type Position = Pair Int
 
-data Outcome = NoKill | Kill deriving (Eq, Show)
+data Outcome = NoKill | Kill deriving (Eq, Show, Generic)
 
-data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq)
+data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq, Generic)
 
-data Space = Black | White | Empty deriving (Show, Eq, Ord)
+data Space = Black | White | Empty deriving (Show, Eq, Ord, Generic)
 
 type Board = M.Map Position Space
 
 data Game = Game { _boardSize :: Int
-                 , _record    :: [GameState]} deriving (Show, Eq)
+                 , _record    :: [GameState]} deriving (Show, Eq, Generic)
 
 data GameState = GameState { _board    :: Board
                            , _toPlay   :: Space
-                           , _captures :: M.Map Space Int} deriving (Show, Eq)
+                           , _captures :: M.Map Space Int} deriving (Show, Eq, Generic)
 
 data Group = Group { _liberties :: S.Set Position
                    , _members   :: S.Set Position
-                   , _player    :: Space} deriving (Show, Eq)
+                   , _player    :: Space} deriving (Show, Eq, Generic)
 
 makeLenses ''Game
 makeLenses ''GameState

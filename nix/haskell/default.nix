@@ -13,5 +13,5 @@ let
 in
 {
   inherit ghc;
-  inherit (hsPkgs) cabal-install ghcide hlint ghcid;
+  inherit (hsPkgs) cabal-install ghcide hlint hindent ghcid;
 }

@@ -42,6 +42,9 @@ instance ToJSONKey Space
 
 type Board = M.Map Position Space
 
+data Result = Result { game :: Game
+                     , score :: M.Map Space Double}
+
 data Game = Game { _boardSize :: Int
                  , _record    :: [GameState]} deriving (Show, Eq, Generic)
 instance ToJSON Game

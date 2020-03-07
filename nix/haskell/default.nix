@@ -1,10 +1,9 @@
-{ pkgs ? import ../nixpkgs {} }:
+{pkgs ? import ../nixpkgs {} }:
 
 let
   inherit (pkgs.haskell) ghcVersion;
 
-  # determine why the inherited haskell version from overlay isn't picked up
-  hsPkgs = pkgs.haskell.packages.ghc865;
+  hsPkgs = pkgs.haskell.packages.${ghcVersion};
 
   pkgDrv = hsPkgs.callCabal2nix "lgl" ../.. {};
   haskellDeps = pkgDrv.getBuildInputs.haskellBuildInputs;

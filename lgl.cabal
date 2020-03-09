@@ -14,17 +14,6 @@ extra-source-files:  README.md
 library
   exposed-modules: Game, GameLogic, Proofs
   ghc-options: -O2 -threaded -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
-  extensions: LambdaCase
-            , TypeOperators
-            , ScopedTypeVariables
-            , FlexibleInstances
-            , FlexibleContexts
-            , MultiParamTypeClasses
-            , PatternSynonyms    
-            , ViewPatterns    
-            , RankNTypes    
-            , GADTs    
-            , RoleAnnotations    
   build-depends:       base >= 4.7 && < 5
                       ,aeson
                       ,containers
@@ -39,17 +28,6 @@ library
   default-language:    Haskell2010
 
 test-suite unit-tests
-  extensions: LambdaCase
-            , TypeOperators
-            , ScopedTypeVariables
-            , FlexibleInstances
-            , FlexibleContexts
-            , MultiParamTypeClasses
-            , PatternSynonyms    
-            , ViewPatterns    
-            , RankNTypes    
-            , GADTs    
-            , RoleAnnotations    
   main-is:       Main.hs
   hs-source-dirs: tst/unit
   type:          exitcode-stdio-1.0

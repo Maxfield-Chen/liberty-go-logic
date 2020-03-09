@@ -1,3 +1,14 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms     #-}
+{-# LANGUAGE RankNTypes     #-}
+{-# LANGUAGE GADTs     #-}
+{-# LANGUAGE RoleAnnotations  #-}
+
 module TestBoard where
 
 import           Game
@@ -36,16 +47,16 @@ k3Board = M.insert (Pair 2 1) White (M.delete (Pair 3 1) k2Board)
 k1GS = GameState k1Board Black (M.fromList [(Black, 0), (White, 0)])
 k2GS = GameState k2Board White (M.fromList [(Black, 1), (White, 0)])
 k3GS = GameState k3Board Black (M.fromList [(Black, 1), (White, 1)])
-k1Game = Game standardBoardSize [k1GS]
-k2Game = Game standardBoardSize [k2GS, k1GS]
-k3Game = Game standardBoardSize [k3GS, k2GS, k1GS]
+k1Game = Game standardBoardSize [k1GS] standardKomi M.empty
+k2Game = Game standardBoardSize [k2GS, k1GS] standardKomi M.empty
+k3Game = Game standardBoardSize [k3GS, k2GS, k1GS] standardKomi M.empty
 suicideGS = GameState suicideBoard Black (M.fromList [(Black, 0), (White, 0)])
 inProgressGS =
   GameState inProgressBoard White (M.fromList [(Black, 0), (White, 0)])
-inProgressGame = Game standardBoardSize [inProgressGS, newGameState]
+inProgressGame = Game standardBoardSize [inProgressGS, newGameState] standardKomi M.empty
 groupGS = GameState groupBoard White (M.fromList [(Black, 0), (White, 0)])
-groupGame = Game standardBoardSize [groupGS]
-suicideGame = Game standardBoardSize [suicideGS]
+groupGame = Game standardBoardSize [groupGS] standardKomi M.empty
+suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty
 
 testCurrentBoard = TestCase
   (assertEqual "for currentBoard with begun game,"
@@ -76,7 +87,6 @@ testGetPositionEmpty = TestCase
       Bound pos -> getPosition pos inProgressGame
     )
   )
-
 
 testGetNeighborsFour =
   let pos = Pair 5 5
@@ -275,6 +285,41 @@ testPlaceStoneValidSuicide = TestCase
     )
   )
 
+testComputeScoreEmpty =
+  TestCase
+    (assertEqual
+       "for ComputeScore with an empty board."
+       (M.insert Empty (S.fromList (concat boardPositions)) M.empty)
+       (computeScore newGame))
+
+testComputeScoreBasicWhite =
+  TestCase
+    (assertEqual
+       "for ComputeScore with a single surrounded white point."
+       (let whiteTerritory =
+              M.insert White (S.insert (Pair 3 1) S.empty) M.empty
+            combinedTerritory =
+              M.insert
+                Empty
+                (S.delete (Pair 3 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k1Board))
+                whiteTerritory
+         in combinedTerritory)
+       (computeScore k1Game))
+
+testComputeScoreBasicBlack =
+  TestCase
+    (assertEqual
+       "for ComputeScore with a single surrounded black point."
+       (let whiteTerritory =
+              M.insert Black (S.insert (Pair 2 1) S.empty) M.empty
+            combinedTerritory =
+              M.insert
+                Empty
+                (S.delete (Pair 2 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k2Board))
+                whiteTerritory
+         in combinedTerritory)
+       (computeScore k2Game))
+
 setters = TestList
   [ TestLabel "SetPositionValid"           testSetPositionValid
   , TestLabel "SetPositionOccupied"        testSetPositionOccupied
@@ -302,5 +347,7 @@ getters = TestList
   , TestLabel "testPosToGroupThree"    testPosToGroupThree
   , TestLabel "testPosToGroupSingletonBordering"
               testPosToGroupSingletonBordering
+  , TestLabel "testComputeScoreEmpty" testComputeScoreEmpty
+  , TestLabel "testComputeScoreBasicWhite" testComputeScoreBasicWhite
+  , TestLabel "testComputeScoreBasicBlack" testComputeScoreBasicBlack
   ]
-

@@ -1,3 +1,14 @@
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms     #-}
+{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE RankNTypes     #-}
+{-# LANGUAGE GADTs     #-}
+{-# LANGUAGE RoleAnnotations  #-}
+
 module Proofs where
 
 import           Data.The

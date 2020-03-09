@@ -1,3 +1,16 @@
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms     #-}
+{-# LANGUAGE RankNTypes     #-}
+{-# LANGUAGE GADTs     #-}
+{-# LANGUAGE RoleAnnotations  #-}
+
 module GameLogic where
 
 import           Control.Lens               hiding (Empty)
@@ -14,7 +27,6 @@ import           Theory.Named
 
 printBoard :: Game -> IO ()
 printBoard game = do
-  let boardPositions = [ [ Pair x y | x <- [0 .. 18] ] | y <- [0 .. 18] ]
   mapM_
     (\row ->
       putStrLn ""
@@ -105,6 +117,60 @@ revertWhenIllegalKo o = do
 csl :: Traversal' Game GameState
 csl = record . _head
 
+seenPosInTerritory :: Fact (IsBound pos) => Position ~~ pos -> Territory -> Bool
+seenPosInTerritory pos territory =
+  the pos `S.member` (M.findWithDefault S.empty Black territory) ||
+  the pos `S.member` (M.findWithDefault S.empty White territory) ||
+  the pos `S.member` (M.findWithDefault S.empty Empty territory)
+
+--TODO: Provide method to mark groups as alive / dead within territory
+computeScore :: Game -> Territory
+computeScore game = foldr scorePosition M.empty $ concat boardPositions
+  where
+    mergeArea :: Area -> Territory -> Space -> Territory
+    mergeArea area territory space =
+      M.insertWith S.union space (area ^. enclosedPositions) territory
+    scorePosition :: Position -> Territory -> Territory
+    scorePosition pos territory =
+      name pos $ \case
+        Bound pos ->
+          if not (seenPosInTerritory pos territory)
+            then case getPosition pos game of
+                   Empty ->
+                     let area = posToArea pos game
+                         mergeAreaWithTerritory = mergeArea area territory
+                      in if | area ^. bordersBlack && area ^. bordersWhite ->
+                              mergeAreaWithTerritory Empty
+                            | area ^. bordersBlack ->
+                              mergeAreaWithTerritory Black
+                            | area ^. bordersWhite ->
+                              mergeAreaWithTerritory White
+                            | otherwise -> mergeAreaWithTerritory Empty
+                   _ -> territory
+            else territory
+
+
+posToArea :: Fact (IsBound pos) => Position ~~ pos -> Game -> Area
+posToArea pos game =
+  let enclosedPositions = posToGroup pos game ^. members
+      borderingPositions =
+        concatMap
+          (\neighborPos ->
+             name neighborPos $ \case
+               Bound neighborPos -> getNeighbors neighborPos game)
+          enclosedPositions
+      borderingColors =
+        foldr
+          (\pos ret ->
+             name pos $ \case
+               Bound pos -> S.insert (getPosition pos game) ret)
+          S.empty
+          borderingPositions
+   in Area
+        (Black `S.member` borderingColors)
+        (White `S.member` borderingColors)
+        enclosedPositions
+
 currentBoard :: Game -> Board
 currentBoard game = fromMaybe M.empty (preview (csl . board) game)
 
@@ -125,6 +191,8 @@ getNeighbors pos game =
   let neighbors = (\delta -> (+) <$> the pos <*> delta) <$> neighborDeltas
   in  filter (bounded (view boardSize game)) neighbors
 
+-- TODO: Write GDP style proofs for
+--       could be used as part of combined proof for isValid
 checkOccupied :: Fact (IsBound pos) => Position ~~ pos -> ExceptGame ()
 checkOccupied pos = do
   o <- lift $ isOccupied pos
@@ -174,7 +242,7 @@ enumGroup group game =
 -- Given a position, build the group associated with that position
 posToGroup :: Fact (IsBound pos) => Position ~~ pos -> Game -> Group
 posToGroup pos game =
-  let player    = getPosition pos game
+  let player = getPosition pos game
       liberties = adjMatchingPos Empty pos game
-      newGroup  = Group liberties (S.singleton (the pos)) player
-  in  enumGroup newGroup game
+      newGroup = Group liberties (S.singleton (the pos)) player
+   in enumGroup newGroup game

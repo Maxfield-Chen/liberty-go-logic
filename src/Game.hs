@@ -40,6 +40,10 @@ instance ToJSONKey (Game.Pair Int)
 instance FromJSONKey (Game.Pair Int)
 
 
+data GameStatus = GameProposed | InProgress | CountingProposed | CountingAccepted | OutcomeProposed | OutcomeAccepted deriving (Eq, Show, Read, Generic)
+instance ToJSON GameStatus
+instance FromJSON GameStatus
+
 data Outcome = NoKill | Kill deriving (Eq, Show, Generic)
 instance ToJSON Outcome
 
@@ -61,6 +65,7 @@ data Game =
     , _record :: [GameState]
     , _komi :: Double
     , _finalTerritory :: Territory
+    , _status :: GameStatus
     }
   deriving (Show, Read, Eq, Generic)
 instance ToJSON Game
@@ -96,7 +101,7 @@ standardKomi = 5.5
 standardBoardSize = 19
 boardPositions = [ [ Pair x y | x <- [0 .. 18 :: Int] ] | y <- [0 .. 18 :: Int] ]
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
-newGame = Game standardBoardSize [newGameState] standardKomi M.empty
+newGame = Game standardBoardSize [newGameState] standardKomi M.empty InProgress
 
 bounded :: (Num n, Ord n) => n -> Pair n -> Bool
 bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs

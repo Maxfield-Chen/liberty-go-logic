@@ -24,7 +24,7 @@ import GHC.Generics
 import Data.Aeson.Types hiding (Pair)
 
 
-data Pair a = Pair a a deriving (Show, Eq, Ord, Generic)
+data Pair a = Pair a a deriving (Show, Read, Eq, Ord, Generic)
 
 instance Functor Pair where
   fmap f (Pair x y) = Pair (f x) (f y)
@@ -46,7 +46,7 @@ instance ToJSON Outcome
 data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq, Generic)
 instance ToJSON MoveError
 
-data Space = Black | White | Empty deriving (Show, Eq, Ord, Generic)
+data Space = Black | White | Empty deriving (Show, Read, Eq, Ord, Generic)
 instance ToJSON Space
 instance FromJSON Space
 instance FromJSONKey Space
@@ -62,7 +62,7 @@ data Game =
     , _komi :: Double
     , _finalTerritory :: Territory
     }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Read, Eq, Generic)
 instance ToJSON Game
 instance FromJSON Game
 
@@ -76,7 +76,7 @@ data Area =
 
 data GameState = GameState { _board    :: Board
                            , _toPlay   :: Space
-                           , _captures :: M.Map Space Int} deriving (Show, Eq, Generic)
+                           , _captures :: M.Map Space Int} deriving (Show, Read, Eq, Generic)
 instance ToJSON GameState
 instance FromJSON GameState
 

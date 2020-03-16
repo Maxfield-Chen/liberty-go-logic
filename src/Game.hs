@@ -39,8 +39,7 @@ instance FromJSON (Game.Pair Int)
 instance ToJSONKey (Game.Pair Int)
 instance FromJSONKey (Game.Pair Int)
 
-
-data GameStatus = GameProposed | InProgress | CountingProposed | CountingAccepted | OutcomeProposed | OutcomeAccepted deriving (Eq, Show, Read, Generic)
+data GameStatus = GameRejected | GameProposed | InProgress | CountingProposed | CountingAccepted | TerritoryProposed | TerritoryAccepted deriving (Eq, Show, Read, Generic)
 instance ToJSON GameStatus
 instance FromJSON GameStatus
 

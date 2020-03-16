@@ -246,3 +246,30 @@ posToGroup pos game =
       liberties = adjMatchingPos Empty pos game
       newGroup = Group liberties (S.singleton (the pos)) player
    in enumGroup newGroup game
+
+
+updateGameProposal :: Bool -> Game -> GameStatus
+updateGameProposal approves game =
+  let getNewStatus approves old
+        | old == GameProposed && approves = InProgress
+        | old == GameProposed && not approves = GameRejected
+        | otherwise = old
+   in getNewStatus approves (game ^. status)
+
+updateCountingProposal :: Bool -> Game -> GameStatus
+updateCountingProposal approves game =
+  let getNewStatus approves old
+        | old == InProgress && approves = CountingProposed
+        | old == CountingProposed && approves = CountingAccepted
+        | old == CountingProposed && not approves = InProgress
+        | otherwise = old
+   in getNewStatus approves (game ^. status)
+
+updateTerritoryProposal :: Bool -> Game -> GameStatus
+updateTerritoryProposal approves game =
+  let getNewStatus approves old
+        | old == CountingAccepted && approves = TerritoryProposed
+        | old == TerritoryProposed && approves = TerritoryAccepted
+        | old == TerritoryProposed && not approves = InProgress
+        | otherwise = old
+   in getNewStatus approves (game ^. status)

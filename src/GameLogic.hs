@@ -248,28 +248,28 @@ posToGroup pos game =
    in enumGroup newGroup game
 
 
-updateGameProposal :: Bool -> Game -> GameStatus
+updateGameProposal :: Bool -> Game -> Game
 updateGameProposal approves game =
   let getNewStatus approves old
         | old == GameProposed && approves = InProgress
         | old == GameProposed && not approves = GameRejected
         | otherwise = old
-   in getNewStatus approves (game ^. status)
+   in game {_status = getNewStatus approves (game ^. status)}
 
-updateCountingProposal :: Bool -> Game -> GameStatus
+updateCountingProposal :: Bool -> Game -> Game
 updateCountingProposal approves game =
   let getNewStatus approves old
         | old == InProgress && approves = CountingProposed
         | old == CountingProposed && approves = CountingAccepted
         | old == CountingProposed && not approves = InProgress
         | otherwise = old
-   in getNewStatus approves (game ^. status)
+   in game {_status = getNewStatus approves (game ^. status)}
 
-updateTerritoryProposal :: Bool -> Game -> GameStatus
+updateTerritoryProposal :: Bool -> Game -> Game
 updateTerritoryProposal approves game =
   let getNewStatus approves old
         | old == CountingAccepted && approves = TerritoryProposed
         | old == TerritoryProposed && approves = TerritoryAccepted
         | old == TerritoryProposed && not approves = InProgress
         | otherwise = old
-   in getNewStatus approves (game ^. status)
+   in game {_status = getNewStatus approves (game ^. status)}

@@ -247,14 +247,13 @@ posToGroup pos game =
       newGroup = Group liberties (S.singleton (the pos)) player
    in enumGroup newGroup game
 
-
 updateGameProposal :: Bool -> Game -> Game
 updateGameProposal approves game =
   let getNewStatus approves old
         | old == GameProposed && approves = InProgress
         | old == GameProposed && not approves = GameRejected
         | otherwise = old
-   in game {_status = getNewStatus approves (game ^. status)}
+   in game & status .~ getNewStatus approves (game ^. status)
 
 updateCountingProposal :: Bool -> Game -> Game
 updateCountingProposal approves game =
@@ -263,13 +262,14 @@ updateCountingProposal approves game =
         | old == CountingProposed && approves = CountingAccepted
         | old == CountingProposed && not approves = InProgress
         | otherwise = old
-   in game {_status = getNewStatus approves (game ^. status)}
+   in game & status .~ getNewStatus approves (game ^. status)
 
-updateTerritoryProposal :: Bool -> Game -> Game
-updateTerritoryProposal approves game =
+updateTerritoryProposal :: Territory -> Bool -> Game -> Game
+updateTerritoryProposal territory approves game =
   let getNewStatus approves old
         | old == CountingAccepted && approves = TerritoryProposed
         | old == TerritoryProposed && approves = TerritoryAccepted
         | old == TerritoryProposed && not approves = InProgress
         | otherwise = old
-   in game {_status = getNewStatus approves (game ^. status)}
+   in (game & status .~ getNewStatus approves (game ^. status)) &
+      finalTerritory .~ territory

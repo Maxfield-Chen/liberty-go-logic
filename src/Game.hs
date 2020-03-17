@@ -57,6 +57,7 @@ instance ToJSONKey Space
 
 type Board = M.Map Position Space
 type Territory = M.Map Space (S.Set Position)
+type Score = (Double, Double)
 
 data Game =
   Game
@@ -64,6 +65,7 @@ data Game =
     , _record :: [GameState]
     , _komi :: Double
     , _finalTerritory :: Territory
+    , _finalScore :: Score
     , _status :: GameStatus
     }
   deriving (Show, Read, Eq, Generic)
@@ -100,7 +102,7 @@ standardKomi = 5.5
 standardBoardSize = 19
 boardPositions = [ [ Pair x y | x <- [0 .. 18 :: Int] ] | y <- [0 .. 18 :: Int] ]
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
-newGame = Game standardBoardSize [newGameState] standardKomi M.empty InProgress
+newGame = Game standardBoardSize [newGameState] standardKomi M.empty (0,0) InProgress
 
 bounded :: (Num n, Ord n) => n -> Pair n -> Bool
 bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs

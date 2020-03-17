@@ -47,16 +47,16 @@ k3Board = M.insert (Pair 2 1) White (M.delete (Pair 3 1) k2Board)
 k1GS = GameState k1Board Black (M.fromList [(Black, 0), (White, 0)])
 k2GS = GameState k2Board White (M.fromList [(Black, 1), (White, 0)])
 k3GS = GameState k3Board Black (M.fromList [(Black, 1), (White, 1)])
-k1Game = Game standardBoardSize [k1GS] standardKomi M.empty InProgress
-k2Game = Game standardBoardSize [k2GS, k1GS] standardKomi M.empty InProgress
-k3Game = Game standardBoardSize [k3GS, k2GS, k1GS] standardKomi M.empty InProgress
+k1Game = Game standardBoardSize [k1GS] standardKomi M.empty (0,0) InProgress
+k2Game = Game standardBoardSize [k2GS, k1GS] standardKomi M.empty (0,0) InProgress
+k3Game = Game standardBoardSize [k3GS, k2GS, k1GS] standardKomi M.empty (0,0) InProgress
 suicideGS = GameState suicideBoard Black (M.fromList [(Black, 0), (White, 0)])
 inProgressGS =
   GameState inProgressBoard White (M.fromList [(Black, 0), (White, 0)])
-inProgressGame = Game standardBoardSize [inProgressGS, newGameState] standardKomi M.empty InProgress
+inProgressGame = Game standardBoardSize [inProgressGS, newGameState] standardKomi M.empty (0,0) InProgress
 groupGS = GameState groupBoard White (M.fromList [(Black, 0), (White, 0)])
-groupGame = Game standardBoardSize [groupGS] standardKomi M.empty InProgress
-suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty InProgress
+groupGame = Game standardBoardSize [groupGS] standardKomi M.empty (0,0) InProgress
+suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty (0,0) InProgress
 
 testCurrentBoard = TestCase
   (assertEqual "for currentBoard with begun game,"
@@ -290,7 +290,7 @@ testComputeScoreEmpty =
     (assertEqual
        "for ComputeScore with an empty board."
        (M.insert Empty (S.fromList (concat boardPositions)) M.empty)
-       (computeScore newGame))
+       (estimateTerritory newGame))
 
 testComputeScoreBasicWhite =
   TestCase
@@ -304,7 +304,7 @@ testComputeScoreBasicWhite =
                 (S.delete (Pair 3 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k1Board))
                 whiteTerritory
          in combinedTerritory)
-       (computeScore k1Game))
+       (estimateTerritory k1Game))
 
 testComputeScoreBasicBlack =
   TestCase
@@ -318,7 +318,7 @@ testComputeScoreBasicBlack =
                 (S.delete (Pair 2 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k2Board))
                 whiteTerritory
          in combinedTerritory)
-       (computeScore k2Game))
+       (estimateTerritory k2Game))
 
 setters = TestList
   [ TestLabel "SetPositionValid"           testSetPositionValid

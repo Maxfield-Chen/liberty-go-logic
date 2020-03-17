@@ -124,8 +124,8 @@ seenPosInTerritory pos territory =
   the pos `S.member` (M.findWithDefault S.empty Empty territory)
 
 --TODO: Provide method to mark groups as alive / dead within territory
-computeScore :: Game -> Territory
-computeScore game = foldr scorePosition M.empty $ concat boardPositions
+estimateTerritory :: Game -> Territory
+estimateTerritory game = foldr scorePosition M.empty $ concat boardPositions
   where
     mergeArea :: Area -> Territory -> Space -> Territory
     mergeArea area territory space =

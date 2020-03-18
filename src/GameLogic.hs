@@ -149,6 +149,18 @@ estimateTerritory game = foldr scorePosition M.empty $ concat boardPositions
                    _ -> territory
             else territory
 
+getFinalScore :: Game -> Score
+getFinalScore game =
+  let blackCaptures =
+        fromIntegral $ fromMaybe 0 (currentCaptures game M.!? Black)
+      whiteCaptures =
+        fromIntegral $ fromMaybe 0 (currentCaptures game M.!? White)
+   in ( blackCaptures +
+        fromIntegral
+          (S.size (fromMaybe S.empty ((game ^. finalTerritory) M.!? Black)))
+      , whiteCaptures + game ^. komi +
+        fromIntegral
+          (S.size (fromMaybe S.empty ((game ^. finalTerritory) M.!? White))))
 
 posToArea :: Fact (IsBound pos) => Position ~~ pos -> Game -> Area
 posToArea pos game =
@@ -173,6 +185,9 @@ posToArea pos game =
 
 currentBoard :: Game -> Board
 currentBoard game = fromMaybe M.empty (preview (csl . board) game)
+
+currentCaptures :: Game -> M.Map Space Int
+currentCaptures game = fromMaybe M.empty (preview (csl . captures) game)
 
 nextToPlay :: Game -> Space
 nextToPlay game = fromMaybe Black (preview (csl . toPlay) game)

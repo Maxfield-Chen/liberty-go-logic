@@ -264,41 +264,44 @@ posToGroup pos game =
 
 updateGameProposal :: Bool -> Game -> Game
 updateGameProposal approves game =
-  let getNewStatus approves old
-        | old == GameProposed && approves = InProgress
-        | old == GameProposed && not approves = GameRejected
-        | otherwise = old
+  let getNewStatus approves oldStatus
+        | oldStatus == GameProposed && approves = InProgress
+        | oldStatus == GameProposed && not approves = GameRejected
+        | otherwise = oldStatus
    in game & status .~ getNewStatus approves (game ^. status)
 
 proposeCounting :: Game -> Game
 proposeCounting game =
-  let old = game ^. status
+  let oldStatus = game ^. status
       newStatus =
-        if old == InProgress
+        if oldStatus == InProgress
           then CountingProposed
-          else old
+          else oldStatus
    in game & status .~ newStatus
 
 updateCountingProposal :: Bool -> Game -> Game
 updateCountingProposal approves game =
-  let getNewStatus approves old
-        | old == CountingProposed && approves = CountingAccepted
-        | old == CountingProposed && not approves = InProgress
-        | otherwise = old
+  let getNewStatus approves oldStatus
+        | oldStatus == CountingProposed && approves = CountingAccepted
+        | oldStatus == CountingProposed && not approves = InProgress
+        | otherwise = oldStatus
    in game & status .~ getNewStatus approves (game ^. status)
 
 proposeTerritory :: Territory -> Game -> Game
 proposeTerritory territory game =
-  let old = game ^. status
+  let oldStatus = game ^. status
       newStatus =
-        if old == CountingAccepted then TerritoryProposed else old
-  in (game & status .~ newStatus) &
-      finalTerritory .~ territory
+        if oldStatus == CountingAccepted
+          then TerritoryProposed
+          else oldStatus
+   in if oldStatus /= newStatus
+        then (game & status .~ newStatus) & finalTerritory .~ territory
+        else game
 
 updateTerritoryProposal :: Bool -> Game -> Game
 updateTerritoryProposal approves game =
-  let getNewStatus approves old
-        | old == TerritoryProposed && approves = TerritoryAccepted
-        | old == TerritoryProposed && not approves = InProgress
-        | otherwise = old
+  let getNewStatus approves oldStatus
+        | oldStatus == TerritoryProposed && approves = TerritoryAccepted
+        | oldStatus == TerritoryProposed && not approves = InProgress
+        | otherwise = oldStatus
    in (game & status .~ getNewStatus approves (game ^. status))

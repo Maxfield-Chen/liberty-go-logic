@@ -270,21 +270,35 @@ updateGameProposal approves game =
         | otherwise = old
    in game & status .~ getNewStatus approves (game ^. status)
 
+proposeCounting :: Game -> Game
+proposeCounting game =
+  let old = game ^. status
+      newStatus =
+        if old == InProgress
+          then CountingProposed
+          else old
+   in game & status .~ newStatus
+
 updateCountingProposal :: Bool -> Game -> Game
 updateCountingProposal approves game =
   let getNewStatus approves old
-        | old == InProgress && approves = CountingProposed
         | old == CountingProposed && approves = CountingAccepted
         | old == CountingProposed && not approves = InProgress
         | otherwise = old
    in game & status .~ getNewStatus approves (game ^. status)
 
-updateTerritoryProposal :: Territory -> Bool -> Game -> Game
-updateTerritoryProposal territory approves game =
+proposeTerritory :: Territory -> Game -> Game
+proposeTerritory territory game =
+  let old = game ^. status
+      newStatus =
+        if old == CountingAccepted then TerritoryProposed else old
+  in (game & status .~ newStatus) &
+      finalTerritory .~ territory
+
+updateTerritoryProposal :: Bool -> Game -> Game
+updateTerritoryProposal approves game =
   let getNewStatus approves old
-        | old == CountingAccepted && approves = TerritoryProposed
         | old == TerritoryProposed && approves = TerritoryAccepted
         | old == TerritoryProposed && not approves = InProgress
         | otherwise = old
-   in (game & status .~ getNewStatus approves (game ^. status)) &
-      finalTerritory .~ territory
+   in (game & status .~ getNewStatus approves (game ^. status))

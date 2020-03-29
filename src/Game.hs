@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
@@ -21,10 +22,41 @@ import           Control.Monad.Trans.Except
 import qualified Data.Map                   as M
 import qualified Data.Set                   as S
 import GHC.Generics
+import qualified Generics.SOP as SOP
 import Data.Aeson.Types hiding (Pair)
 
+import qualified Language.Elm.Pretty as Pretty
+import qualified Language.Elm.Simplification as Simplification
+import Language.Haskell.To.Elm
 
-data Pair a = Pair a a deriving (Show, Read, Eq, Ord, Generic)
+
+-- TODO: Refactor modules based on type rather than functionality
+data Pair a =
+  Pair a a
+  deriving ( Show
+           , Read
+           , Eq
+           , Ord
+           , Generic
+           , ToJSON
+           , FromJSON
+           , ToJSONKey
+           , FromJSONKey
+           , SOP.Generic
+           , SOP.HasDatatypeInfo
+           )
+
+instance HasElmType User where
+  elmDefinition =
+    Just $ deriveElmTypeDefinition @User defaultOptions "Api.User.User"
+
+instance HasElmDecoder Aeson.Value User where
+  elmDecoderDefinition =
+    Just $ deriveElmJSONDecoder @User defaultOptions Aeson.defaultOptions "Api.User.decoder"
+
+instance HasElmEncoder Aeson.Value User where
+  elmEncoderDefinition =
+    Just $ deriveElmJSONEncoder @User defaultOptions Aeson.defaultOptions "Api.User.encoder"
 
 instance Functor Pair where
   fmap f (Pair x y) = Pair (f x) (f y)
@@ -34,26 +66,53 @@ instance Applicative Pair where
   (Pair f g) <*> (Pair x y) = Pair (f x) (g y)
 
 type Position = Pair Int
-instance ToJSON (Game.Pair Int)
-instance FromJSON (Game.Pair Int)
-instance ToJSONKey (Game.Pair Int)
-instance FromJSONKey (Game.Pair Int)
 
-data GameStatus = GameRejected | GameProposed | InProgress | CountingProposed | CountingAccepted | TerritoryProposed | TerritoryAccepted deriving (Eq, Show, Read, Generic)
-instance ToJSON GameStatus
-instance FromJSON GameStatus
+data GameStatus
+  = GameRejected
+  | GameProposed
+  | InProgress
+  | CountingProposed
+  | CountingAccepted
+  | TerritoryProposed
+  | TerritoryAccepted
+  deriving ( Eq
+           , Show
+           , Read
+           , Generic
+           , ToJSON
+           , FromJSON
+           , SOP.Generic
+           , SOP.HasDatatypeInfo
+           )
 
 data Outcome = NoKill | Kill deriving (Eq, Show, Generic)
 instance ToJSON Outcome
 
-data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq, Generic)
-instance ToJSON MoveError
+data MoveError
+  = IllegalPlayer
+  | NoBoard
+  | IllegalKo
+  | Suicide
+  | OutOfBounds
+  | Occupied
+  deriving (Show, Eq, Generic, ToJSON, SOP.Generic, SOP.HasDatatypeInfo)
 
-data Space = Black | White | Empty deriving (Show, Read, Eq, Ord, Generic)
-instance ToJSON Space
-instance FromJSON Space
-instance FromJSONKey Space
-instance ToJSONKey Space
+data Space
+  = Black
+  | White
+  | Empty
+  deriving ( Show
+           , Read
+           , Eq
+           , Ord
+           , Generic
+           , ToJSON
+           , FromJSON
+           , ToJSONKey
+           , FromJSONKey
+           , SOP.Generic
+           , SOP.HasDatatypeInfo
+           )
 
 type Board = M.Map Position Space
 type Territory = M.Map Space (S.Set Position)
@@ -68,9 +127,23 @@ data Game =
     , _finalScore :: Score
     , _status :: GameStatus
     }
-  deriving (Show, Read, Eq, Generic)
-instance ToJSON Game
-instance FromJSON Game
+  deriving (Show, Read, Eq, Generic, ToJSON, FromJSON, SOP.Generic, SOP.HasDatatypeInfo)
+
+data GameState =
+  GameState
+    { _board :: Board
+    , _toPlay :: Space
+    , _captures :: M.Map Space Int
+    }
+  deriving (Show, Read, Eq, Generic, ToJSON, FromJSON, SOP.Generic, SOP.HasDatatypeInfo)
+
+data Group =
+  Group
+    { _liberties :: S.Set Position
+    , _members :: S.Set Position
+    , _player :: Space
+    }
+  deriving (Show, Eq, Generic, ToJSON, SOP.Generic, SOP.HasDatatypeInfo)
 
 data Area =
   Area
@@ -79,17 +152,6 @@ data Area =
     , _enclosedPositions :: S.Set Position
     }
   deriving (Show, Eq)
-
-data GameState = GameState { _board    :: Board
-                           , _toPlay   :: Space
-                           , _captures :: M.Map Space Int} deriving (Show, Read, Eq, Generic)
-instance ToJSON GameState
-instance FromJSON GameState
-
-data Group = Group { _liberties :: S.Set Position
-                   , _members   :: S.Set Position
-                   , _player    :: Space} deriving (Show, Eq, Generic)
-instance ToJSON Group
 
 makeLenses ''Game
 makeLenses ''GameState

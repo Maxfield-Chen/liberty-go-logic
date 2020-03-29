@@ -18,4 +18,5 @@ pkgs.mkShell {
 
   # Use the libraries from the derivation created by ghcWithHoogle.
   NIX_GHC_LIBDIR = "${haskell.ghc}/lib/ghc-${haskell.ghc.version}";
+  #LD_LIBRARY_PATH = "${openssl.out}/lib;${zlib}/lib";
 }

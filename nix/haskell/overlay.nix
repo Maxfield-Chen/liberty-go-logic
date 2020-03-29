@@ -14,6 +14,21 @@ let
           rev = "0838dcbbd139e87b0f84165261982c82ca94fd08";
         })
         {});
+      servant-to-elm = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
+        pkg = "servant-to-elm";
+        ver = "0.4.1.0";
+        sha256 = "1w4d2m6p4fv92w6wws2rpiy0jz42iz8s3sa0gn9wf2nk0rymd8qm";
+      } {});
+      haskell-to-elm = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
+        pkg = "haskell-to-elm";
+        ver = "0.3.0.0";
+        sha256 = "1w4d2m6p4fv92w6wws2rpiy0jz42iz8s3sa0gn9wf2nk0rymd8qm";
+      } {});
+      elm-syntax = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
+        pkg = "elm-syntax";
+        ver = "0.3.0.0";
+        sha256 = "0w6vgl9pdbkkbhz6i435yxp4ihpsw55drls6dxmc8d2ikx4547v9";
+      } {});
       hie-bios = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
         pkg = "hie-bios";
         ver = "0.3.2";

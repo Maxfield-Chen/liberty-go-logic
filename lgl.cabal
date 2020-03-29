@@ -10,6 +10,7 @@ category:            Application
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
+pkgconfig-depends: zlib
 
 library
   exposed-modules: Game, GameLogic, Proofs
@@ -17,10 +18,14 @@ library
   build-depends:       base >= 4.7 && < 5
                       ,aeson
                       ,containers
+                      ,elm-syntax
+                      ,haskell-to-elm
+                      ,servant-to-elm
                       ,mtl
                       ,lens
                       ,transformers
-                      ,gdp == 0.0.3.0 
+                      ,gdp == 0.0.3.0
+                      ,generics-sop
                       ,sort
                       ,HUnit
                       ,Cabal

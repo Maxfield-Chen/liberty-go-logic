@@ -10,13 +10,14 @@ category:            Application
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
-pkgconfig-depends: zlib
 
 library
   exposed-modules: Game, GameLogic, Proofs
   ghc-options: -O2 -threaded -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
   build-depends:       base >= 4.7 && < 5
                       ,aeson
+                      ,unordered-containers
+                      ,text
                       ,containers
                       ,elm-syntax
                       ,haskell-to-elm

@@ -16,7 +16,7 @@
 {-# LANGUAGE RoleAnnotations  #-}
 
 
-module Build where
+module ElmConversion where
 
 import           Control.Lens               hiding (Empty)
 import           Control.Monad.State
@@ -34,12 +34,15 @@ import qualified Language.Elm.Simplification as Simplification
 import qualified Language.Elm.Type as Type
 import qualified Language.Elm.Expression as Expression
 import Language.Haskell.To.Elm
+import qualified Data.Text.IO as I
+import qualified Data.Text as T
+import System.IO
 
 import Game
 
+sourceDir = "./elm/src/"
 
-createElmDefinitions :: IO ()
-createElmDefinitions = do
+modules = do
   let
     definitions =
       (Simplification.simplifyDefinition <$>
@@ -59,8 +62,16 @@ createElmDefinitions = do
       (Simplification.simplifyDefinition <$>
         jsonDefinitions @Group)
 
-    modules =
-      Pretty.modules definitions
+  Pretty.modules definitions
 
-  forM_ (HashMap.toList modules) $ \(_moduleName, contents) ->
-    print contents
+writeModules =
+  forM_ (HashMap.toList modules) $ \(moduleList, contents) -> do
+    let modulePath =
+          mconcat $
+          zipWith
+            (\p s -> [p, s])
+            moduleList
+           ((replicate (length moduleList - 1) "/") ++ [".elm"])
+        filePath = mconcat $ [sourceDir] ++ modulePath
+    handle <- openFile (T.unpack filePath) WriteMode
+    hPrint handle contents

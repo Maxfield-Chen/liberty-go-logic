@@ -1,39 +1,38 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE ViewPatterns     #-}
-{-# LANGUAGE RankNTypes     #-}
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE RoleAnnotations  #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RoleAnnotations       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 
 module Game where
 
-import           Control.Lens               hiding (Empty)
+import           Control.Lens                hiding (Empty)
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
-import Data.Text (Text)
-import qualified Data.Map                   as M
-import qualified Data.Set                   as S
-import GHC.Generics
-import qualified Generics.SOP as SOP
-import Data.Aeson.Types hiding (Pair, defaultOptions)
-import qualified Data.Aeson as Aeson
+import qualified Data.Aeson                  as Aeson
+import           Data.Aeson.Types            hiding (Pair, defaultOptions)
+import qualified Data.Map                    as M
+import qualified Data.Set                    as S
+import           Data.Text                   (Text)
+import qualified Generics.SOP                as SOP
+import           GHC.Generics
 
-import qualified Language.Elm.Pretty as Pretty
+import qualified Language.Elm.Expression     as Expression
+import qualified Language.Elm.Pretty         as Pretty
 import qualified Language.Elm.Simplification as Simplification
-import qualified Language.Elm.Type as Type
-import qualified Language.Elm.Expression as Expression
-import Language.Haskell.To.Elm
+import qualified Language.Elm.Type           as Type
+import           Language.Haskell.To.Elm
 
 
 -- TODO: Refactor modules based on type rather than functionality
@@ -195,12 +194,12 @@ type Score = (Double, Double)
 
 data Game =
   Game
-    { _boardSize :: Int
-    , _record :: [GameState]
-    , _komi :: Double
+    { _boardSize      :: Int
+    , _record         :: [GameState]
+    , _komi           :: Double
     , _finalTerritory :: Territory
-    , _finalScore :: Score
-    , _status :: GameStatus
+    , _finalScore     :: Score
+    , _status         :: GameStatus
     }
   deriving (Show, Read, Eq, Generic, ToJSON, FromJSON, SOP.Generic, SOP.HasDatatypeInfo)
 
@@ -218,8 +217,8 @@ instance HasElmEncoder Aeson.Value Game where
 
 data GameState =
   GameState
-    { _board :: Board
-    , _toPlay :: Space
+    { _board    :: Board
+    , _toPlay   :: Space
     , _captures :: M.Map Space Int
     }
   deriving (Show, Read, Eq, Generic, ToJSON, FromJSON, SOP.Generic, SOP.HasDatatypeInfo)
@@ -239,8 +238,8 @@ instance HasElmEncoder Aeson.Value GameState where
 data Group =
   Group
     { _liberties :: S.Set Position
-    , _members :: S.Set Position
-    , _player :: Space
+    , _members   :: S.Set Position
+    , _player    :: Space
     }
   deriving (Show, Eq, Generic, ToJSON, SOP.Generic, SOP.HasDatatypeInfo)
 
@@ -289,8 +288,8 @@ instance (Aeson.ToJSONKey k, Aeson.FromJSONKey k, HasElmDecoder Aeson.Value v) =
 
 data Area =
   Area
-    { _bordersBlack :: Bool
-    , _bordersWhite :: Bool
+    { _bordersBlack      :: Bool
+    , _bordersWhite      :: Bool
     , _enclosedPositions :: S.Set Position
     }
   deriving (Show, Eq)

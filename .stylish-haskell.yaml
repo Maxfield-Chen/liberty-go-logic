@@ -226,15 +226,6 @@ newline: native
 # needs to be aware of these, so it can parse the file correctly.
 #
 # No language extensions are enabled by default.
-language_extensions:
-  - LambdaCase
-  - TypeOperators
-  - ScopedTypeVariables
-  - FlexibleInstances
-  - FlexibleContexts
-  - MultiParamTypeClasses
-  - PatternSynonyms    
-  - ViewPatterns    
-  - RankNTypes    
-  - GADTs    
-  - RoleAnnotations    
+# language_extensions:
+  # - TemplateHaskell
+  # - QuasiQuotes

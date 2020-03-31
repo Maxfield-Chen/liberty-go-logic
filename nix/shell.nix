@@ -13,7 +13,7 @@ pkgs.mkShell {
     haskell.ghcid
     haskell.ghcide
     haskell.hlint
-    haskell.hindent
+    haskell.stylish-haskell
     pkgs.zlib
   ];
 

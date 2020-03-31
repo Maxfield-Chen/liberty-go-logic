@@ -1,44 +1,43 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE ViewPatterns     #-}
-{-# LANGUAGE RankNTypes     #-}
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE RoleAnnotations  #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RoleAnnotations       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 
 module ElmConversion where
 
-import           Control.Lens               hiding (Empty)
+import           Control.Lens                hiding (Empty)
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
-import qualified Data.Map                   as M
-import qualified Data.Set                   as S
-import GHC.Generics
-import qualified Generics.SOP as SOP
-import Data.Aeson.Types hiding (Pair, defaultOptions)
-import qualified Data.Aeson as Aeson
-import qualified Data.HashMap.Lazy as HashMap
+import qualified Data.Aeson                  as Aeson
+import           Data.Aeson.Types            hiding (Pair, defaultOptions)
+import qualified Data.HashMap.Lazy           as HashMap
+import qualified Data.Map                    as M
+import qualified Data.Set                    as S
+import qualified Generics.SOP                as SOP
+import           GHC.Generics
 
-import qualified Language.Elm.Pretty as Pretty
+import qualified Data.Text                   as T
+import qualified Data.Text.IO                as I
+import qualified Language.Elm.Expression     as Expression
+import qualified Language.Elm.Pretty         as Pretty
 import qualified Language.Elm.Simplification as Simplification
-import qualified Language.Elm.Type as Type
-import qualified Language.Elm.Expression as Expression
-import Language.Haskell.To.Elm
-import qualified Data.Text.IO as I
-import qualified Data.Text as T
-import System.IO
+import qualified Language.Elm.Type           as Type
+import           Language.Haskell.To.Elm
+import           System.IO
 
-import Game
+import           Game
 
 sourceDir = "./elm/src/"
 

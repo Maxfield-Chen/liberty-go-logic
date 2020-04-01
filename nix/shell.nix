@@ -13,9 +13,11 @@ pkgs.mkShell {
     haskell.ghcid
     haskell.ghcide
     haskell.hlint
-    haskell.hindent
+    haskell.stylish-haskell
+    pkgs.zlib
   ];
 
   # Use the libraries from the derivation created by ghcWithHoogle.
   NIX_GHC_LIBDIR = "${haskell.ghc}/lib/ghc-${haskell.ghc.version}";
+  LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:/usr/lib/";
 }

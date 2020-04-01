@@ -16,11 +16,12 @@ library
   ghc-options: -O2 -threaded -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
   build-depends:       base >= 4.7 && < 5
                       ,aeson
+                      ,text
                       ,containers
                       ,mtl
                       ,lens
                       ,transformers
-                      ,gdp == 0.0.3.0 
+                      ,gdp == 0.0.3.0
                       ,sort
                       ,HUnit
                       ,Cabal

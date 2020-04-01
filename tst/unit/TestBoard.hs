@@ -1,27 +1,27 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE RankNTypes     #-}
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE RoleAnnotations  #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RoleAnnotations       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module TestBoard where
 
+import           Control.Lens               hiding (Empty)
+import           Control.Monad.State
+import           Control.Monad.Trans.Except
+import qualified Data.Map                   as M
+import           Data.Maybe
+import qualified Data.Set                   as S
+import           Data.Sort
 import           Game
 import           GameLogic
 import           Proofs
 import           Test.HUnit
-import qualified Data.Map                      as M
-import qualified Data.Set                      as S
-import           Control.Monad.State
-import           Data.Maybe
-import           Control.Lens            hiding ( Empty )
-import           Control.Monad.Trans.Except
-import           Data.Sort
 import           Theory.Named
 
 inProgressBoard = M.fromList [(Pair 0 0, Black)]

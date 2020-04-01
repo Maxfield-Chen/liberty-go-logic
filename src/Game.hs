@@ -1,16 +1,18 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE ViewPatterns     #-}
-{-# LANGUAGE RankNTypes     #-}
-{-# LANGUAGE GADTs     #-}
-{-# LANGUAGE RoleAnnotations  #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RoleAnnotations       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 
 
 module Game where
@@ -18,13 +20,29 @@ module Game where
 import           Control.Lens               hiding (Empty)
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
+import qualified Data.Aeson                 as Aeson
+import           Data.Aeson.Types           hiding (Pair, defaultOptions)
 import qualified Data.Map                   as M
 import qualified Data.Set                   as S
-import GHC.Generics
-import Data.Aeson.Types hiding (Pair)
+import           Data.Text                  (Text)
+import           GHC.Generics
 
 
-data Pair a = Pair a a deriving (Show, Read, Eq, Ord, Generic)
+
+-- TODO: Refactor modules based on type rather than functionality
+
+data Pair a =
+  Pair a a
+  deriving ( Show
+           , Read
+           , Eq
+           , Ord
+           , Generic
+           , ToJSON
+           , FromJSON
+           , ToJSONKey
+           , FromJSONKey
+           )
 
 instance Functor Pair where
   fmap f (Pair x y) = Pair (f x) (f y)
@@ -34,26 +52,57 @@ instance Applicative Pair where
   (Pair f g) <*> (Pair x y) = Pair (f x) (g y)
 
 type Position = Pair Int
-instance ToJSON (Game.Pair Int)
-instance FromJSON (Game.Pair Int)
-instance ToJSONKey (Game.Pair Int)
-instance FromJSONKey (Game.Pair Int)
 
-data GameStatus = GameRejected | GameProposed | InProgress | CountingProposed | CountingAccepted | TerritoryProposed | TerritoryAccepted deriving (Eq, Show, Read, Generic)
-instance ToJSON GameStatus
-instance FromJSON GameStatus
+data GameStatus
+  = GameRejected
+  | GameProposed
+  | InProgress
+  | CountingProposed
+  | CountingAccepted
+  | TerritoryProposed
+  | TerritoryAccepted
+  deriving ( Eq
+           , Show
+           , Read
+           , Generic
+           , ToJSON
+           , FromJSON
+           )
 
-data Outcome = NoKill | Kill deriving (Eq, Show, Generic)
-instance ToJSON Outcome
+data Outcome
+  = NoKill
+  | Kill
+  deriving ( Eq
+           , Show
+           , Generic
+           , ToJSON
+           , FromJSON
+           )
 
-data MoveError = IllegalPlayer |  NoBoard |  IllegalKo | Suicide | OutOfBounds | Occupied deriving (Show, Eq, Generic)
-instance ToJSON MoveError
+data MoveError
+  = IllegalPlayer
+  | NoBoard
+  | IllegalKo
+  | Suicide
+  | OutOfBounds
+  | Occupied
+  deriving (Show, Eq, Generic, ToJSON)
 
-data Space = Black | White | Empty deriving (Show, Read, Eq, Ord, Generic)
-instance ToJSON Space
-instance FromJSON Space
-instance FromJSONKey Space
-instance ToJSONKey Space
+data Space
+  = Black
+  | White
+  | Empty
+  deriving ( Show
+           , Read
+           , Eq
+           , Ord
+           , Generic
+           , ToJSON
+           , FromJSON
+           , ToJSONKey
+           , FromJSONKey
+           )
+
 
 type Board = M.Map Position Space
 type Territory = M.Map Space (S.Set Position)
@@ -61,35 +110,39 @@ type Score = (Double, Double)
 
 data Game =
   Game
-    { _boardSize :: Int
-    , _record :: [GameState]
-    , _komi :: Double
+    { _boardSize      :: Int
+    , _record         :: [GameState]
+    , _komi           :: Double
     , _finalTerritory :: Territory
-    , _finalScore :: Score
-    , _status :: GameStatus
+    , _finalScore     :: Score
+    , _status         :: GameStatus
     }
-  deriving (Show, Read, Eq, Generic)
-instance ToJSON Game
-instance FromJSON Game
+  deriving (Show, Read, Eq, Generic, ToJSON, FromJSON)
+
+
+data GameState =
+  GameState
+    { _board    :: Board
+    , _toPlay   :: Space
+    , _captures :: M.Map Space Int
+    }
+  deriving (Show, Read, Eq, Generic, ToJSON, FromJSON)
+
+data Group =
+  Group
+    { _liberties :: S.Set Position
+    , _members   :: S.Set Position
+    , _player    :: Space
+    }
+  deriving (Show, Eq, Generic, ToJSON)
 
 data Area =
   Area
-    { _bordersBlack :: Bool
-    , _bordersWhite :: Bool
+    { _bordersBlack      :: Bool
+    , _bordersWhite      :: Bool
     , _enclosedPositions :: S.Set Position
     }
   deriving (Show, Eq)
-
-data GameState = GameState { _board    :: Board
-                           , _toPlay   :: Space
-                           , _captures :: M.Map Space Int} deriving (Show, Read, Eq, Generic)
-instance ToJSON GameState
-instance FromJSON GameState
-
-data Group = Group { _liberties :: S.Set Position
-                   , _members   :: S.Set Position
-                   , _player    :: Space} deriving (Show, Eq, Generic)
-instance ToJSON Group
 
 makeLenses ''Game
 makeLenses ''GameState

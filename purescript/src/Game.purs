@@ -8,27 +8,19 @@ import Data.Lens.Record (prop)
 import Data.Map.Internal (Map)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
-import Data.Set.Internal (Set)
+import Data.Set (Set)
 import Data.Symbol (SProxy(SProxy))
 import Data.Tuple (Tuple)
 import Prim (Array, Int, Number)
 
 import Prelude
 
-data Pair Int =
-    Pair Int Int
+data Pair = Pair Int Int
 
-derive instance eqPair :: Eq (Pair Int)
-derive instance ordPair :: Ord (Pair Int)
-derive instance genericPair :: Generic Int rInt => Generic (Pair Int) _
+derive instance eqPair :: Eq (Pair )
+derive instance ordPair :: Ord (Pair )
+derive instance genericPair :: Generic Pair _
 
---------------------------------------------------------------------------------
-_Pair :: forall Int. Prism' (Pair Int) { a :: Int, b :: Int }
-_Pair = prism' (\{ a, b } -> Pair a b) f
-  where
-    f (Pair a b) = Just $ { a: a, b: b }
-
---------------------------------------------------------------------------------
 data GameStatus =
     GameRejected
   | GameProposed
@@ -189,7 +181,7 @@ newtype Game =
       _boardSize :: Int
     , _record :: Array GameState
     , _komi :: Number
-    , _finalTerritory :: Map Space (Set (Pair Int))
+    , _finalTerritory :: Map Space (Set (Pair))
     , _finalScore :: Tuple Number Number
     , _status :: GameStatus
     }
@@ -199,7 +191,7 @@ derive instance genericGame :: Generic Game _
 derive instance newtypeGame :: Newtype Game _
 
 --------------------------------------------------------------------------------
-_Game :: Iso' Game { _boardSize :: Int, _record :: Array GameState, _komi :: Number, _finalTerritory :: Map Space (Set (Pair Int)), _finalScore :: Tuple Number Number, _status :: GameStatus}
+_Game :: Iso' Game { _boardSize :: Int, _record :: Array GameState, _komi :: Number, _finalTerritory :: Map Space (Set (Pair)), _finalScore :: Tuple Number Number, _status :: GameStatus}
 _Game = _Newtype
 
 boardSize :: Lens' Game Int
@@ -211,7 +203,7 @@ record = _Newtype <<< prop (SProxy :: SProxy "_record")
 komi :: Lens' Game Number
 komi = _Newtype <<< prop (SProxy :: SProxy "_komi")
 
-finalTerritory :: Lens' Game (Map Space (Set (Pair Int)))
+finalTerritory :: Lens' Game (Map Space (Set (Pair)))
 finalTerritory = _Newtype <<< prop (SProxy :: SProxy "_finalTerritory")
 
 finalScore :: Lens' Game (Tuple Number Number)
@@ -223,7 +215,7 @@ status = _Newtype <<< prop (SProxy :: SProxy "_status")
 --------------------------------------------------------------------------------
 newtype GameState =
     GameState {
-      _board :: Map (Pair Int) Space
+      _board :: Map (Pair) Space
     , _toPlay :: Space
     , _captures :: Map Space Int
     }
@@ -233,10 +225,10 @@ derive instance genericGameState :: Generic GameState _
 derive instance newtypeGameState :: Newtype GameState _
 
 --------------------------------------------------------------------------------
-_GameState :: Iso' GameState { _board :: Map (Pair Int) Space, _toPlay :: Space, _captures :: Map Space Int}
+_GameState :: Iso' GameState { _board :: Map (Pair) Space, _toPlay :: Space, _captures :: Map Space Int}
 _GameState = _Newtype
 
-board :: Lens' GameState (Map (Pair Int) Space)
+board :: Lens' GameState (Map (Pair) Space)
 board = _Newtype <<< prop (SProxy :: SProxy "_board")
 
 toPlay :: Lens' GameState Space
@@ -248,8 +240,8 @@ captures = _Newtype <<< prop (SProxy :: SProxy "_captures")
 --------------------------------------------------------------------------------
 newtype Group =
     Group {
-      _liberties :: Set (Pair Int)
-    , _members :: Set (Pair Int)
+      _liberties :: Set Pair
+    , _members :: Set Pair
     , _player :: Space
     }
 
@@ -258,13 +250,13 @@ derive instance genericGroup :: Generic Group _
 derive instance newtypeGroup :: Newtype Group _
 
 --------------------------------------------------------------------------------
-_Group :: Iso' Group { _liberties :: Set (Pair Int), _members :: Set (Pair Int), _player :: Space}
+_Group :: Iso' Group { _liberties :: Set (Pair), _members :: Set (Pair), _player :: Space}
 _Group = _Newtype
 
-liberties :: Lens' Group (Set (Pair Int))
+liberties :: Lens' Group (Set (Pair))
 liberties = _Newtype <<< prop (SProxy :: SProxy "_liberties")
 
-members :: Lens' Group (Set (Pair Int))
+members :: Lens' Group (Set (Pair))
 members = _Newtype <<< prop (SProxy :: SProxy "_members")
 
 player :: Lens' Group Space

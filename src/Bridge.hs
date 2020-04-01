@@ -4,7 +4,7 @@ import           Data.Proxy
 import           Game
 import           Language.PureScript.Bridge
 
-myTypes = [let p = (Proxy :: Proxy (Pair Int)) in order p (mkSumType p),
+myTypes = [let p = (Proxy :: Proxy (Pair Integer)) in order p (mkSumType p),
            let p = (Proxy :: Proxy GameStatus) in equal p (mkSumType p),
            let p = (Proxy :: Proxy Outcome) in equal p (mkSumType p),
            let p = (Proxy :: Proxy MoveError) in equal p (mkSumType p),

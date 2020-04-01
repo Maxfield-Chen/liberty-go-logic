@@ -14,21 +14,6 @@ let
           rev = "0838dcbbd139e87b0f84165261982c82ca94fd08";
         })
         {});
-      purescript-bridge = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
-        pkg = "purescript-bridge";
-        ver = "0.14.0.0";
-        sha256 = "1idx85x0sdj29sxzniiwam31cbdl7vq3scd1z41l6pyx7gk2cjyk";
-      } {});
-      servant-purescript = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
-        pkg = "servant-purescript";
-        ver = "0.10.0.0";
-        sha256 = "1rw4is79srdhab0dch4zglzr9lfnxwfm1bhdi5ybr6hszvlnvk64";
-      } {});
-      servant-subscriber = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
-        pkg = "servant-subscriber";
-        ver = "0.7.0.0";
-        sha256 = "10n4hzcqhfblvl6l4kjkhkhzqfdsnp0slgvfzcz2m1pk1zq3ip50";
-      } {});
       hie-bios = pkgs.haskell.lib.dontCheck (self.callHackageDirect {
         pkg = "hie-bios";
         ver = "0.3.2";

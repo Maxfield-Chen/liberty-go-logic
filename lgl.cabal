@@ -12,15 +12,13 @@ cabal-version:       >=1.10
 extra-source-files:  README.md
 
 library
-  exposed-modules: Game, GameLogic, Proofs, Bridge
+  exposed-modules: Game, GameLogic, Proofs
   ghc-options: -O2 -threaded -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
   build-depends:       base >= 4.7 && < 5
                       ,aeson
                       ,text
                       ,containers
                       ,mtl
-                      ,purescript-bridge
-                      ,servant-purescript
                       ,lens
                       ,transformers
                       ,gdp == 0.0.3.0

@@ -11,15 +11,14 @@
 
 module TestBoard where
 
-import           Control.Lens               hiding (Empty)
+import           Control.Lens               ((%~), (&))
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
 import qualified Data.Map                   as M
-import           Data.Maybe
 import qualified Data.Set                   as S
-import           Data.Sort
+import           Data.Sort                  (sort)
 import           Game
-import           GameLogic
+import qualified GameLogic                  as GL
 import           Proofs
 import           Test.HUnit
 import           Theory.Named
@@ -63,13 +62,13 @@ suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty (0,0) InPr
 testCurrentBoard = TestCase
   (assertEqual "for currentBoard with begun game,"
                inProgressBoard
-               (currentBoard inProgressGame)
+               (GL.currentBoard inProgressGame)
   )
 
 testNextToPlay = TestCase
   (assertEqual "for NextToPlay with begun game,"
                White
-               (nextToPlay inProgressGame)
+               (GL.nextToPlay inProgressGame)
   )
 
 testGetPositionOccupied = TestCase
@@ -77,7 +76,7 @@ testGetPositionOccupied = TestCase
     "for getPosition with valid occupied space,"
     Black
     (name (Pair 0 0) $ \case
-      Bound pos -> getPosition pos inProgressGame
+      Bound pos -> GL.getPosition pos inProgressGame
     )
   )
 
@@ -86,7 +85,7 @@ testGetPositionEmpty = TestCase
     "for getPosition with valid unoccupied space,"
     Empty
     (name (Pair 0 1) $ \case
-      Bound pos -> getPosition pos inProgressGame
+      Bound pos -> GL.getPosition pos inProgressGame
     )
   )
 
@@ -100,7 +99,7 @@ testGetNeighborsFour =
           "for getPosition with 4 spaces,"
           (sort n)
           (sort $ name pos $ \case
-            Bound pos -> getNeighbors pos inProgressGame
+            Bound pos -> GL.getNeighbors pos inProgressGame
           )
         )
 
@@ -112,7 +111,7 @@ testGetNeighborsThree =
           "for getPosition with 3 spaces,"
           (sort n)
           (sort $ name pos $ \case
-            Bound pos -> getNeighbors pos inProgressGame
+            Bound pos -> GL.getNeighbors pos inProgressGame
           )
         )
 
@@ -124,7 +123,7 @@ testGetNeighborsTwo =
           "for getPosition with 2 spaces,"
           (sort n)
           (sort $ name pos $ \case
-            Bound pos -> getNeighbors pos inProgressGame
+            Bound pos -> GL.getNeighbors pos inProgressGame
           )
         )
 
@@ -135,7 +134,7 @@ testisOccupiedBlack =
           "for isOccupied when occupied"
           True
           (name pos $ \case
-            Bound pos -> evalState (isOccupied pos) inProgressGame
+            Bound pos -> evalState (GL.isOccupied pos) inProgressGame
           )
         )
 
@@ -146,7 +145,7 @@ testisOccupiedEmpty =
           "for isOccupied when empty"
           False
           (name pos $ \case
-            Bound pos -> evalState (isOccupied pos) inProgressGame
+            Bound pos -> evalState (GL.isOccupied pos) inProgressGame
           )
         )
 
@@ -157,7 +156,7 @@ testAdjacentGroupNone =
           "for testAdjacentMatching when none match"
           S.empty
           (name pos $ \case
-            Bound pos -> adjMatchingPos White pos k1Game
+            Bound pos -> GL.adjMatchingPos White pos k1Game
           )
         )
 
@@ -168,7 +167,7 @@ testAdjacentGroupThree =
           "for testAdjacentMatching when three match"
           (S.fromList [Pair 2 0, Pair 1 1, Pair 2 2])
           (name pos $ \case
-            Bound pos -> adjMatchingPos Black pos k1Game
+            Bound pos -> GL.adjMatchingPos Black pos k1Game
           )
         )
 
@@ -180,7 +179,7 @@ testPosToGroupOne =
           "for posToGroup when singleton,"
           group
           (name pos $ \case
-            Bound pos -> posToGroup pos inProgressGame
+            Bound pos -> GL.posToGroup pos inProgressGame
           )
         )
 
@@ -194,7 +193,7 @@ testPosToGroupThree =
           "for posToGroup when three group,"
           group
           (name pos $ \case
-            Bound pos -> posToGroup pos groupGame
+            Bound pos -> GL.posToGroup pos groupGame
           )
         )
 
@@ -208,7 +207,7 @@ testPosToGroupSingletonBordering =
           "for posToGroup when bordering singleton group,"
           group
           (name pos $ \case
-            Bound pos -> posToGroup pos k1Game
+            Bound pos -> GL.posToGroup pos k1Game
           )
         )
 
@@ -224,7 +223,7 @@ testSetPositionValid =
             }
           )
           (name pos $ \case
-            Bound pos -> runState (runExceptT (setPosition pos)) inProgressGame
+            Bound pos -> runState (runExceptT (GL.setPosition pos)) inProgressGame
           )
         )
 
@@ -236,20 +235,20 @@ testSetPositionOccupied =
           "for setPosition when occupied"
           (Left Occupied, inProgressGame)
           (name pos $ \case
-            Bound pos -> runState (runExceptT (setPosition pos)) inProgressGame
+            Bound pos -> runState (runExceptT (GL.setPosition pos)) inProgressGame
           )
         )
 
 testRevertWhenIllegalKo = TestCase
   (assertEqual "for revertWhenIllegalKo when Ko"
-               (Right (), k2Game)
-               (runState (runExceptT revertWhenIllegalKo) k3Game)
+               (Left IllegalKo, k2Game)
+               (runState (runExceptT GL.revertWhenIllegalKo) k3Game)
   )
 
 testRevertWhenIllegalNoKo = TestCase
   (assertEqual "for revertWhenIllegalKo when No Ko"
                (Right (), k2Game)
-               (runState (runExceptT revertWhenIllegalKo) k2Game)
+               (runState (runExceptT GL.revertWhenIllegalKo) k2Game)
   )
 
 testPlaceStoneValidNoKill = TestCase
@@ -262,7 +261,7 @@ testPlaceStoneValidNoKill = TestCase
       }
     )
     (name (Pair 5 5) $ \case
-      Bound pos -> runState (runExceptT (placeStone pos)) inProgressGame
+      Bound pos -> runState (runExceptT (GL.placeStone pos)) inProgressGame
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )
@@ -272,7 +271,7 @@ testPlaceStoneValidKill = TestCase
     "for placeStone when Valid with a kill"
     (Right Kill, k2Game)
     (name (Pair 3 1) $ \case
-      Bound pos -> runState (runExceptT (placeStone pos)) k1Game
+      Bound pos -> runState (runExceptT (GL.placeStone pos)) k1Game
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )
@@ -282,7 +281,7 @@ testPlaceStoneValidSuicide = TestCase
     "for placeStone when Valid with a Suicide"
     (Left Suicide, suicideGame)
     (name (Pair 3 1) $ \case
-      Bound pos -> runState (runExceptT (placeStone pos)) suicideGame
+      Bound pos -> runState (runExceptT (GL.placeStone pos)) suicideGame
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )
@@ -292,7 +291,7 @@ testComputeScoreEmpty =
     (assertEqual
        "for ComputeScore with an empty board."
        (M.insert Empty (S.fromList (concat boardPositions)) M.empty)
-       (estimateTerritory newGame))
+       (GL.estimateTerritory newGame))
 
 testComputeScoreBasicWhite =
   TestCase
@@ -306,7 +305,7 @@ testComputeScoreBasicWhite =
                 (S.delete (Pair 3 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k1Board))
                 whiteTerritory
          in combinedTerritory)
-       (estimateTerritory k1Game))
+       (GL.estimateTerritory k1Game))
 
 testComputeScoreBasicBlack =
   TestCase
@@ -320,7 +319,7 @@ testComputeScoreBasicBlack =
                 (S.delete (Pair 2 1) (S.fromList (concat boardPositions)) S.\\ S.fromList (M.keys k2Board))
                 whiteTerritory
          in combinedTerritory)
-       (estimateTerritory k2Game))
+       (GL.estimateTerritory k2Game))
 
 setters = TestList
   [ TestLabel "SetPositionValid"           testSetPositionValid

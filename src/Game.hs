@@ -17,14 +17,13 @@
 
 module Game where
 
-import           Control.Lens               hiding (Empty)
+import           Control.Lens               (makeLenses)
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
-import qualified Data.Aeson                 as Aeson
+import qualified Data.Aeson                 ()
 import           Data.Aeson.Types           hiding (Pair, defaultOptions)
 import qualified Data.Map                   as M
 import qualified Data.Set                   as S
-import           Data.Text                  (Text)
 import           GHC.Generics
 
 

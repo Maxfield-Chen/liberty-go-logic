@@ -12,7 +12,9 @@
 
 module GameLogic where
 
-import           Control.Lens               hiding (Empty)
+import           Control.Lens               (Traversal', ix, preview, use, view,
+                                             (%=), (&), (+=), (.=), (.~), (^.),
+                                             _head)
 import           Control.Monad.State
 import           Control.Monad.Trans.Except
 import qualified Data.Map                   as M
@@ -25,7 +27,7 @@ import           Proofs
 import           Theory.Named
 
 printBoard :: Game -> IO ()
-printBoard game = do
+printBoard game =
   mapM_
     (\row ->
       putStrLn ""
@@ -242,7 +244,6 @@ adjMatchingPos sp pos game =
 -- Enum a group by adding all neighbors of members + their liberties
 -- Base Case: return if new group == old group
 -- Find all neighbors, add same player unseen to members
--- See if findSpaceOf is a candidate for GDP value. The folding classification may be tricky.
 enumGroup :: Group -> Game -> Group
 enumGroup group game =
   let findSpaceOf sp game = foldl

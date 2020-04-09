@@ -12,10 +12,9 @@
 module Proofs where
 
 import           Data.The
-import           Game
+import           Game           (Pair, bounded)
 import           Logic.Implicit
 import           Logic.Proof
-import           Prelude
 import           Theory.Named
 
 
@@ -28,11 +27,9 @@ data BoundedCase n val where
   Unbound_ ::Fact (IsUnbound val) => BoundedCase n val
 
 pattern Bound ::  (Num n, Ord n) => Fact (IsBound val) => (Pair n ~~ val) -> (Pair n ~~ val)
---brittany-disable-next-binding
 pattern Bound val <- (classifyBound -> Bound_ val)
 
 pattern Unbound :: (Num n, Ord n) => Fact (IsUnbound val) => (Pair n ~~ val)
---brittany-disable-next-binding
 pattern Unbound <- (classifyBound -> Unbound_ )
 
 -- TODO: Figure out why this gives me an error when I specify 19 as an external variable

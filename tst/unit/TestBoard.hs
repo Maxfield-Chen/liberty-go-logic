@@ -24,6 +24,8 @@ import           Proofs
 import           Test.HUnit
 import           Theory.Named
 
+-- TODO: Add unit tests for status state machine
+
 inProgressBoard = M.fromList [(Pair 0 0, Black)]
 suicideBoard = M.fromList
   [(Pair 2 1, White), (Pair 3 0, White), (Pair 3 2, White), (Pair 4 1, White)]
@@ -240,14 +242,14 @@ testSetPositionOccupied =
 
 testRevertWhenIllegalKo = TestCase
   (assertEqual "for revertWhenIllegalKo when Ko"
-               (Left IllegalKo, k2Game)
-               (runState (runExceptT (revertWhenIllegalKo Kill)) k3Game)
+               (Right (), k2Game)
+               (runState (runExceptT revertWhenIllegalKo) k3Game)
   )
 
 testRevertWhenIllegalNoKo = TestCase
   (assertEqual "for revertWhenIllegalKo when No Ko"
-               (Right Kill, k2Game)
-               (runState (runExceptT (revertWhenIllegalKo Kill)) k2Game)
+               (Right (), k2Game)
+               (runState (runExceptT revertWhenIllegalKo) k2Game)
   )
 
 testPlaceStoneValidNoKill = TestCase

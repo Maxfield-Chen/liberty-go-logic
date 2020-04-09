@@ -57,8 +57,9 @@ data GameStatus
   = GameRejected
   | GameProposed
   | InProgress
-  | CountingProposed
-  | CountingAccepted
+  | BlackPassed
+  | WhitePassed
+  | Counting
   | TerritoryProposed
   | TerritoryAccepted
   deriving ( Eq

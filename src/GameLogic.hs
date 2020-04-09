@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments        #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
@@ -48,7 +47,10 @@ placeStone pos = do
   groups  <- lift $ gets (surroundingGroups pos)
   player  <- lift $ gets (getPosition pos)
   outcome <- resolveCapture player groups
-  revertWhenIllegalKo outcome
+  revertWhenIllegalKo
+  status .= InProgress
+  pure outcome
+
 
 surroundingGroups :: Fact (IsBound pos) => (Position ~~ pos) -> Game -> [Group]
 surroundingGroups pos game =
@@ -109,10 +111,10 @@ revokeRecord = do
   restRecord <- use record
   record .= tail restRecord
 
-revertWhenIllegalKo :: Outcome -> ExceptGame Outcome
-revertWhenIllegalKo o = do
+revertWhenIllegalKo ::  ExceptGame ()
+revertWhenIllegalKo = do
   illegalKo <- lift $ gets isIllegalKo
-  if illegalKo then lift revokeRecord >> throwE IllegalKo else pure o
+  when illegalKo $ lift revokeRecord >> throwE IllegalKo
 
 csl :: Traversal' Game GameState
 csl = record . _head
@@ -270,28 +272,25 @@ updateGameProposal approves game =
         | otherwise = oldStatus
    in game & status .~ getNewStatus approves (game ^. status)
 
-proposeCounting :: Game -> Game
-proposeCounting game =
-  let oldStatus = game ^. status
-      newStatus =
-        if oldStatus == InProgress
-          then CountingProposed
-          else oldStatus
-   in game & status .~ newStatus
+spaceToPassStatus :: Space -> GameStatus
+spaceToPassStatus Black = BlackPassed
+spaceToPassStatus White = WhitePassed
 
-updateCountingProposal :: Bool -> Game -> Game
-updateCountingProposal approves game =
-  let getNewStatus approves oldStatus
-        | oldStatus == CountingProposed && approves = CountingAccepted
-        | oldStatus == CountingProposed && not approves = InProgress
+proposePass :: Space -> Game -> Game
+proposePass space game =
+  let oldStatus = game ^. status
+      newStatus oldStatus
+        | oldStatus == InProgress = spaceToPassStatus space
+        | oldStatus == BlackPassed && space == White = Counting
+        | oldStatus == WhitePassed && space == Black = Counting
         | otherwise = oldStatus
-   in game & status .~ getNewStatus approves (game ^. status)
+   in game & status .~ (newStatus oldStatus)
 
 proposeTerritory :: Territory -> Game -> Game
 proposeTerritory territory game =
   let oldStatus = game ^. status
       newStatus =
-        if oldStatus == CountingAccepted
+        if oldStatus == Counting
           then TerritoryProposed
           else oldStatus
    in if oldStatus /= newStatus

@@ -48,16 +48,16 @@ k3Board = M.insert (Pair 2 1) White (M.delete (Pair 3 1) k2Board)
 k1GS = GameState k1Board Black (M.fromList [(Black, 0), (White, 0)])
 k2GS = GameState k2Board White (M.fromList [(Black, 1), (White, 0)])
 k3GS = GameState k3Board Black (M.fromList [(Black, 1), (White, 1)])
-k1Game = Game standardBoardSize [k1GS] standardKomi M.empty (0,0) InProgress
-k2Game = Game standardBoardSize [k2GS, k1GS] standardKomi M.empty (0,0) InProgress
-k3Game = Game standardBoardSize [k3GS, k2GS, k1GS] standardKomi M.empty (0,0) InProgress
+k1Game = Game standardBoardSize [k1GS] standardKomi M.empty Empty (0,0) InProgress
+k2Game = Game standardBoardSize [k2GS, k1GS] standardKomi M.empty Empty (0,0) InProgress
+k3Game = Game standardBoardSize [k3GS, k2GS, k1GS] standardKomi M.empty Empty (0,0) InProgress
 suicideGS = GameState suicideBoard Black (M.fromList [(Black, 0), (White, 0)])
 inProgressGS =
   GameState inProgressBoard White (M.fromList [(Black, 0), (White, 0)])
-inProgressGame = Game standardBoardSize [inProgressGS, newGameState] standardKomi M.empty (0,0) InProgress
+inProgressGame = Game standardBoardSize [inProgressGS, newGameState] standardKomi M.empty Empty (0,0) InProgress
 groupGS = GameState groupBoard White (M.fromList [(Black, 0), (White, 0)])
-groupGame = Game standardBoardSize [groupGS] standardKomi M.empty (0,0) InProgress
-suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty (0,0) InProgress
+groupGame = Game standardBoardSize [groupGS] standardKomi M.empty Empty (0,0) InProgress
+suicideGame = Game standardBoardSize [suicideGS] standardKomi M.empty Empty (0,0) InProgress
 
 testCurrentBoard = TestCase
   (assertEqual "for currentBoard with begun game,"

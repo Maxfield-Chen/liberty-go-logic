@@ -298,10 +298,15 @@ proposeTerritory territory game =
         then (game & status .~ newStatus) & finalTerritory .~ territory
         else game
 
-updateTerritoryProposal :: Bool -> Game -> Game
-updateTerritoryProposal approves game =
+acceptTerritoryProposal :: Space -> Bool -> Game -> Game
+acceptTerritoryProposal space approves game =
   let getNewStatus approves oldStatus
-        | oldStatus == TerritoryProposed && approves = TerritoryAccepted
+        | oldStatus == TerritoryProposed && canApprove space game && approves = TerritoryAccepted
         | oldStatus == TerritoryProposed && not approves = InProgress
         | otherwise = oldStatus
    in (game & status .~ getNewStatus approves (game ^. status))
+
+canApprove :: Space -> Game -> Bool
+canApprove Black (Game _ _ _ _ White _ _) = True
+canApprove White (Game _ _ _ _ Black _ _) = True
+canApprove _ _                            = False

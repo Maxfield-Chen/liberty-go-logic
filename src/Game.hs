@@ -110,12 +110,13 @@ type Score = (Double, Double)
 
 data Game =
   Game
-    { _boardSize      :: Int
-    , _record         :: [GameState]
-    , _komi           :: Double
-    , _finalTerritory :: Territory
-    , _finalScore     :: Score
-    , _status         :: GameStatus
+    { _boardSize                :: Int
+    , _record                   :: [GameState]
+    , _komi                     :: Double
+    , _finalTerritory           :: Territory
+    , _finalTerritoryProposedBy :: Space
+    , _finalScore               :: Score
+    , _status                   :: GameStatus
     }
   deriving (Show, Read, Eq, Generic, ToJSON, FromJSON)
 
@@ -155,7 +156,7 @@ standardKomi = 5.5
 standardBoardSize = 19
 boardPositions = [ [ Pair x y | x <- [0 .. 18 :: Int] ] | y <- [0 .. 18 :: Int] ]
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
-newGame = Game standardBoardSize [newGameState] standardKomi M.empty (0,0) GameProposed
+newGame = Game standardBoardSize [newGameState] standardKomi M.empty Empty (0,0) GameProposed
 
 bounded :: (Num n, Ord n) => n -> Pair n -> Bool
 bounded bs (Pair x y) = x >= 0 && y >= 0 && x < bs && y < bs

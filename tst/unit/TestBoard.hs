@@ -261,7 +261,7 @@ testPlaceStoneValidNoKill = TestCase
       }
     )
     (name (Pair 5 5) $ \case
-      Bound pos -> runState (runExceptT (GL.placeStone pos)) inProgressGame
+      Bound pos -> runState (runExceptT (GL.placeStone White pos)) inProgressGame
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )
@@ -271,7 +271,7 @@ testPlaceStoneValidKill = TestCase
     "for placeStone when Valid with a kill"
     (Right Kill, k2Game)
     (name (Pair 3 1) $ \case
-      Bound pos -> runState (runExceptT (GL.placeStone pos)) k1Game
+      Bound pos -> runState (runExceptT (GL.placeStone Black pos)) k1Game
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )
@@ -281,7 +281,7 @@ testPlaceStoneValidSuicide = TestCase
     "for placeStone when Valid with a Suicide"
     (Left Suicide, suicideGame)
     (name (Pair 3 1) $ \case
-      Bound pos -> runState (runExceptT (GL.placeStone pos)) suicideGame
+      Bound pos -> runState (runExceptT (GL.placeStone Black pos)) suicideGame
       Unbound   -> (Left OutOfBounds, newGame)
     )
   )

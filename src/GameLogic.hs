@@ -43,8 +43,9 @@ printBoard game =
 -- Place a stone, updating the game record if the move is valid.
 -- Returns an Outcome indicating if the move resulted in a kill
 -- Throws a MoveError exception if the move was invalid
-placeStone :: Fact (IsBound pos) => (Position ~~ pos) -> ExceptGame Outcome
-placeStone pos = do
+placeStone :: Fact (IsBound pos) => Space -> (Position ~~ pos) -> ExceptGame Outcome
+placeStone space pos = do
+  errWrongPlayer space
   setPosition pos
   groups  <- lift $ gets (surroundingGroups pos)
   player  <- lift $ gets (getPosition pos)
@@ -53,6 +54,11 @@ placeStone pos = do
   status .= InProgress
   pure outcome
 
+
+errWrongPlayer :: Space -> ExceptGame ()
+errWrongPlayer space = do
+  ntp <- lift (gets nextToPlay)
+  when (ntp /= space) (throwE IllegalPlayer)
 
 surroundingGroups :: Fact (IsBound pos) => (Position ~~ pos) -> Game -> [Group]
 surroundingGroups pos game =

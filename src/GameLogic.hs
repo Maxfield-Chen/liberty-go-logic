@@ -293,12 +293,12 @@ proposePass space game =
         | otherwise = oldStatus
    in game & status .~ (newStatus oldStatus)
 
-proposeTerritory :: Territory -> Game -> Game
-proposeTerritory territory game =
+proposeTerritory :: Territory -> Space -> Game -> Game
+proposeTerritory territory space game =
   let oldStatus = game ^. status
       newStatus =
         if oldStatus == Counting
-          then TerritoryProposed
+          then spaceToPassStatus space
           else oldStatus
    in if oldStatus /= newStatus
         then (game & status .~ newStatus) & finalTerritory .~ territory
@@ -306,13 +306,13 @@ proposeTerritory territory game =
 
 acceptTerritoryProposal :: Space -> Bool -> Game -> Game
 acceptTerritoryProposal space approves game =
-  let getNewStatus approves oldStatus
-        | oldStatus == TerritoryProposed && canApprove space game && approves = TerritoryAccepted
-        | oldStatus == TerritoryProposed && not approves = InProgress
-        | otherwise = oldStatus
-   in (game & status .~ getNewStatus approves (game ^. status))
+  let getNewStatus approves
+        | canApprove space game && approves = TerritoryAccepted
+        | not approves = InProgress
+        | otherwise = game ^. status
+   in (game & status .~ getNewStatus approves)
 
 canApprove :: Space -> Game -> Bool
-canApprove Black (Game _ _ _ _ White _ _) = True
-canApprove White (Game _ _ _ _ Black _ _) = True
-canApprove _ _                            = False
+canApprove Black (Game _ _ _ _ _ WhiteProposed) = True
+canApprove White (Game _ _ _ _ _ BlackProposed) = True
+canApprove _ _                                  = False

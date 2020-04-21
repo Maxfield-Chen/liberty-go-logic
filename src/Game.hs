@@ -87,7 +87,7 @@ data MoveError
   | Suicide
   | OutOfBounds
   | Occupied
-  deriving (Show, Eq, Generic, ToJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Space
   = Black

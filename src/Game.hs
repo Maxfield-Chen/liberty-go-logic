@@ -154,7 +154,7 @@ type ExceptGame a = ExceptT MoveError (State Game) a
 
 standardKomi = 5.5
 standardBoardSize = 19
-boardPositions = [ [ Pair x y | x <- [0 .. 18 :: Int] ] | y <- [0 .. 18 :: Int] ]
+boardPositions = [ [ Pair x y | x <- [0 .. 19 :: Int] ] | y <- [0 .. 19 :: Int] ]
 newGameState = GameState M.empty Black (M.fromList [(Black, 0), (White, 0)])
 newGame = Game standardBoardSize [newGameState] standardKomi M.empty (0,0) GameProposed
 

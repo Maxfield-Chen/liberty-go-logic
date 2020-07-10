@@ -36,5 +36,5 @@ pattern Unbound <- (classifyBound -> Unbound_ )
 -- Relates to Int vs nonspecific ord / num type
 classifyBound :: forall n val . (Num n, Ord n) =>  (Pair n ~~ val) -> BoundedCase (Pair n) val
 classifyBound val
-  | bounded 19 (the val) = note (axiom :: Proof (IsBound val)) (Bound_ val)
+  | bounded 20 (the val) = note (axiom :: Proof (IsBound val)) (Bound_ val)
   | otherwise            = note (axiom :: Proof (IsUnbound val)) Unbound_

@@ -12,5 +12,5 @@ let
 in
 {
   inherit ghc;
-  inherit (hsPkgs) cabal-install ghcide hlint ghcid stylish-haskell;
+  inherit (hsPkgs) cabal-install ghcide hlint ghcid ormolu hpack;
 }

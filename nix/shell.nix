@@ -1,5 +1,5 @@
 let
-  nixpkgs = import ./nixpkgs.nix {};
+  nixpkgs = import <nixpkgs> {overlays = [(import ./haskell/overlay.nix)];};
 
   inherit (nixpkgs) pkgs;
 
@@ -12,8 +12,9 @@ pkgs.mkShell {
     haskell.ghc
     haskell.ghcid
     haskell.ghcide
+    haskell.ormolu
+    haskell.hpack
     haskell.hlint
-    haskell.stylish-haskell
     pkgs.zlib
   ];
 

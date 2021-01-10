@@ -14,7 +14,7 @@ extra-source-files:  README.md
 library
   exposed-modules: Game, GameLogic, Proofs
   ghc-options: -O2 -threaded -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base 
                       ,aeson
                       ,text
                       ,containers
